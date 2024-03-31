@@ -132,12 +132,14 @@ def experiment(args):
             state_goal_3_cos = MDMS.state_goal_cosine(states_total, goals_3, masks, 3).to('cpu')
             state_goal_2_cos = MDMS.state_goal_cosine(states_total, goals_2, masks, 2).to('cpu')
 
+            total_intrinsic = state_goal_5_cos + state_goal_4_cos + state_goal_3_cos + state_goal_2_cos + Intrinsic_reward_tensor
+
             add_ = {'r': torch.FloatTensor(reward).unsqueeze(-1).to('cpu'),
                 'r_i': MDMS.intrinsic_reward(states_total, goals_2, masks).to('cpu'),
                 'logp': logp.unsqueeze(-1).to('cpu'),
                 'entropy': entropy.unsqueeze(-1).to('cpu'),
                 'hierarchy_selected': hierarchies_selected.to('cpu'),
-                'hierarchy_drop_reward':(MDMS.hierarchy_drop_reward(reward_tensor + Intrinsic_reward_tensor, hierarchies_selected) * args.lambda_policy_im).to('cpu'),
+                'hierarchy_drop_reward':(MDMS.hierarchy_drop_reward(reward_tensor + (total_intrinsic * args.lambda_policy_im), hierarchies_selected)).to('cpu'),
                 'm': mask.to('cpu'),
                 'v_5': value_5.to('cpu'),
                 'v_4': value_4.to('cpu'),
