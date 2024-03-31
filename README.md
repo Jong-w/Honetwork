@@ -38,8 +38,7 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 (환경 나눈 것 설명)
 
 (결과 plot)
-![이미지](./img/FROSTBITE.png)
-![이미지](./img/Gravitar.png)
-![이미지](./img/Qbert.png)
-![이미지](./img/Kangaroo.png)
 <img src="./img/FROSTBITE.png" width="300" height="300">
+<img src="./img/Gravitar.png" width="300" height="300">
+<img src="./img/Qbert.png" width="300" height="300">
+<img src="./img/Kangaroo.png" width="300" height="300">
