@@ -6,6 +6,8 @@ This code is for "From Extensive to Efficient: Dynamic Hierarchical Reinforcemen
 
 Authors: Jong Won Kim, Dongjae Kim
 
+![이미지](./img/fig_1.png)
+
 ## Usage
 It is highly recommanded to adopt Conda/MiniConda to manage the environment to avoid some compilation errors.
 
@@ -36,4 +38,7 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 (환경 나눈 것 설명)
 
 (결과 plot)
-![이미지](./img/fig_1.png)
+![이미지](./img/FROSTBITE.png)
+![이미지](./img/Gravitar.png)
+![이미지](./img/Qbert.png)
+![이미지](./img/Kangaroo.png)
