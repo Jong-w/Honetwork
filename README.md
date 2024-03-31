@@ -36,4 +36,4 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 (환경 나눈 것 설명)
 
 (결과 plot)
-![대체 텍스트]('MDM/img/fig_1.png')
+![대체 텍스트](MDM/img/fig_1.png)
