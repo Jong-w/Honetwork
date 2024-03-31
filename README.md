@@ -42,4 +42,4 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 ![이미지](./img/Gravitar.png)
 ![이미지](./img/Qbert.png)
 ![이미지](./img/Kangaroo.png)
-<center><img src="./img/FROSTBITE.png" width="45" height="45"></center>
+<img src="./img/FROSTBITE.png" width="300" height="300">
