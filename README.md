@@ -53,11 +53,11 @@ These results are obtained using a normal (not prioitized) replay buffer. (ìš”ê±
 
 
 ## Citation
-'''python
+```
 @article{EfftoEff,
   title={From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals},
   author={Jong Won Kim, Dongjae Kim},
   journal={~~~},
   year={2024}
 }
-'''
+```
