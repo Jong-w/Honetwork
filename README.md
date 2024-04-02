@@ -40,7 +40,10 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 (결과 plot)
 
 
+
+<p align="center">
 <img src="./img/FROSTBITE.png" width="300" height="300">
 <img src="./img/Gravitar.png" width="300" height="300">
 <img src="./img/Qbert.png" width="300" height="300">
 <img src="./img/Kangaroo.png" width="300" height="300">
+</p>
