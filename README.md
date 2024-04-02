@@ -45,8 +45,7 @@ python MDM_main.py \
 
 
 ## Result
-Results for the performance of MDM on the atari environments are depicted here.
-
+We demonstrate the efficacy of our approach through extensive experiments. Our model shows significant improvements over baseline models in various environments.
 
 
 <p align="center">
@@ -58,6 +57,7 @@ Results for the performance of MDM on the atari environments are depicted here.
 
 
 ## Citation
+If you find our work useful in your research, please consider citing:
 ```
 @article{EfftoEff,
   title={From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals},
