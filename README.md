@@ -16,7 +16,13 @@ Clone this repository to use MDM.
 git clone https://github.com/Jong-w/MDM.git
 ```
 Install dependencies using the requirements.txt file:
-2. Install the dependencies
+
+2. Move directory
+```shell
+cd MDM
+```
+
+3. Install the dependencies
 ```
 pip install -r requirements.txt
 ```
