@@ -37,15 +37,16 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 
 (환경 나눈 것 설명)
 <p align="center">
-<img src="./img/Env_classification.png" width="400" height="300">
+<img src="./img/Env_classification.png" width="400" height="200">
 </p>
+
 (결과 plot)
 
 
 
 <p align="center">
-<img src="./img/FROSTBITE.png" width="400" height="300">
-<img src="./img/Gravitar.png" width="400" height="300">
-<img src="./img/Qbert.png" width="400" height="300">
-<img src="./img/Kangaroo.png" width="400" height="300">
+<img src="./img/FROSTBITE.png" width="200" height="150">
+<img src="./img/Gravitar.png" width="200" height="150">
+<img src="./img/Qbert.png" width="200" height="150">
+<img src="./img/Kangaroo.png" width="200" height="150">
 </p>
