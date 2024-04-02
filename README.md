@@ -45,8 +45,7 @@ python MDM_main.py \
 
 
 ## Result
-Results for the performance of RMADDPG and QMIX on the Particle Envs and QMIX in SMAC are depicted here. 
-These results are obtained using a normal (not prioitized) replay buffer. (요거 수정)
+Results for the performance of MDM on the atari environments are depicted here.
 
 (환경 나눈 것 설명)
 <p align="center">
