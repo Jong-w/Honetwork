@@ -6,7 +6,7 @@ This code is for "From Extensive to Efficient: Dynamic Hierarchical Reinforcemen
 
 Authors: Jong Won Kim, Dongjae Kim
 
-## Model Structure
+## Model Architecture
 ![이미지](./img/fig_1.png)
 
 ## Installation
