@@ -39,9 +39,6 @@ python MDM_main.py \
     --time_horizon_Hierarchies = [1, 10, 15, 20, 25]
 ```
 
-## Inference
-
-
 
 
 ## Result
