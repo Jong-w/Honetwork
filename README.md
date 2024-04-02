@@ -37,7 +37,7 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 
 (환경 나눈 것 설명)
 <p align="center">
-<img src="./img/Env_classification.png" width="300" height="200">
+<img src="./img/Env_classification.png" width="400" height="200">
 </p>
 
 (결과 plot)
