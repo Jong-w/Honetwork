@@ -47,9 +47,6 @@ python MDM_main.py \
 ## Result
 Results for the performance of MDM on the atari environments are depicted here.
 
-<p align="center">
-<img src="./img/Env_classification.png" width="400" height="220">
-</p>
 
 
 <p align="center">
