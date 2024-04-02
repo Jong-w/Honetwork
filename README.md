@@ -12,13 +12,13 @@ Authors: Jong Won Kim, Dongjae Kim
 It is highly recommanded to adopt Conda/MiniConda to manage the environment to avoid some compilation errors.
 
 1. Clone the repository.
-
+```
 git clone https://github.com/Jong-w/MDM.git
-
+```
 2. Install the dependencies
-
+```
 pip install -r requirements.txt
-
+```
 ## Train
 
 python MDM_main.py \
