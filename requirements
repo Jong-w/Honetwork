@@ -1,0 +1,8 @@
+numpy @ file:///C:/b/abs_f6napi3n6e/croot/numpy_and_numpy_base_1691091651337/work
+pandas==2.1.4
+opencv-python==4.8.0.74
+torch==2.0.1
+torchvision==0.15.2
+tensorboard==2.14.0
+wandb==0.15.8
+gym==0.19.0
