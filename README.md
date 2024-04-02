@@ -31,7 +31,7 @@ python MDM_main.py \
 
 
 
-## RESULTS
+## Result
 Results for the performance of RMADDPG and QMIX on the Particle Envs and QMIX in SMAC are depicted here. 
 These results are obtained using a normal (not prioitized) replay buffer. (요거 수정)
 
@@ -50,3 +50,14 @@ These results are obtained using a normal (not prioitized) replay buffer. (요�
 <img src="./img/Qbert.png" width="300" height="200">
 <img src="./img/Kangaroo.png" width="300" height="200">
 </p>
+
+
+## Citation
+'''
+@article{EfftoEff,
+  title={From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals},
+  author={Jong Won Kim, Dongjae Kim},
+  journal={~~~},
+  year={2024}
+}
+'''
