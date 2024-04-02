@@ -2,15 +2,15 @@
 ## From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals
 
 
-This code is for "From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals".
+This code is for "From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals". Our work introduced hierarchy-drop, novel approach that dynamically tailors hierarchies in accordance with environmental needs to improve the efficiency and effectiveness of learning in complex environments.
 
 Authors: Jong Won Kim, Dongjae Kim
 
 ![이미지](./img/fig_1.png)
 
-## Usage
+## Installation
 
-Clone this repository to use MDM.
+To run the code, please follow these steps:
 1. Clone the repository.
 ```
 git clone https://github.com/Jong-w/MDM.git
@@ -26,6 +26,8 @@ cd MDM
 ```
 pip install -r requirements.txt
 ```
+
+
 ## Train
 ```
 python MDM_main.py \
