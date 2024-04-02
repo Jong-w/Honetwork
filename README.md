@@ -9,12 +9,12 @@ Authors: Jong Won Kim, Dongjae Kim
 ![이미지](./img/fig_1.png)
 
 ## Usage
-It is highly recommanded to adopt Conda/MiniConda to manage the environment to avoid some compilation errors.
-
+Clone this repository to use MDM.
 1. Clone the repository.
 ```
 git clone https://github.com/Jong-w/MDM.git
 ```
+Install dependencies using the requirements.txt file:
 2. Install the dependencies
 ```
 pip install -r requirements.txt
