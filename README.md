@@ -27,11 +27,17 @@ cd MDM
 pip install -r requirements.txt
 ```
 ## Train
-
+```
 python MDM_main.py \
-    --outdir=output_path \
-    --gpus=8 \
-    ~~~(요런 느낌의 하이퍼파라미터)
+    --env_name='FrostbiteNoFrameskip-v4' \
+    --gamma_5=0.999 \
+    --gamma_4=0.999 \
+    --gamma_3=0.999 \
+    --gamma_2=0.999 \
+    --gamma_1=0.999 \
+    --hidden-dim-Hierarchies = [16, 256, 256, 256, 256]\
+    --time_horizon_Hierarchies = [1, 10, 15, 20, 25]
+```
 
 ## Inference
 
