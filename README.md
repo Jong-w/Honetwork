@@ -36,7 +36,9 @@ Results for the performance of RMADDPG and QMIX on the Particle Envs and QMIX in
 These results are obtained using a normal (not prioitized) replay buffer. (요거 수정)
 
 (환경 나눈 것 설명)
-
+<p align="center">
+<img src="./img/Env_classification.png" width="400" height="300">
+</p>
 (결과 plot)
 
 
