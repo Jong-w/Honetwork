@@ -30,6 +30,9 @@ pip install -r requirements.txt
 
 
 ## Train
+
+To train our model, execute the following command. This example uses the FrostbiteNoFrameskip-v4 environment, but the parameters can be adjusted to fit other environments or specific requirements. The gamma values represent the discount factors for different levels of the hierarchy, affecting how future rewards are valued at each level. The hidden-dim-Hierarchies and time_horizon_Hierarchies parameters define the size of the hidden layers and the time horizons for the goals at each hierarchical level, respectively. Adjusting these parameters allows for fine-tuning the model's performance and learning efficiency.
+
 ```
 python MDM_main.py \
     --env_name='FrostbiteNoFrameskip-v4' \
@@ -62,7 +65,7 @@ If you find our work useful in your research, please consider citing:
 @article{EfftoEff,
   title={From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals},
   author={Jong Won Kim, Dongjae Kim},
-  journal={~~~},
+  journal={~arxiv~},
   year={2024}
 }
 ```
