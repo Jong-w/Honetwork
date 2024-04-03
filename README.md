@@ -53,8 +53,7 @@ python MDM_main.py \
 
 
 ## Result
-We demonstrate the efficacy of our approach through extensive experiments. Our model shows significant improvements over baseline models in various environments.
-
+Our approach has been tested across a variety of environments, demonstrating its robustness and effectiveness in enhancing learning efficiency and performance. The images below showcase our model's performance compared to baseline models, across different game environments such as Frostbite, Gravitar, Q*bert, and Kangaroo.
 
 <p align="center">
 <img src="./img/FROSTBITE.png" width="300" height="200">
