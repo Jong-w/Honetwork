@@ -13,17 +13,20 @@ Authors: Jong Won Kim, Dongjae Kim
 
 To run the code, please follow these steps:
 1. Clone the repository.
+First, clone the repository to your local machine using Git. Open your terminal, and enter the following command:
 ```
 git clone https://github.com/Jong-w/MDM.git
 ```
 Install dependencies using the requirements.txt file:
 
-2. Move directory
+2. Navigate to the Project Directory
+Change into the cloned repository's directory:
 ```shell
 cd MDM
 ```
 
 3. Install the dependencies
+Install the required Python packages defined in the requirements.txt file:
 ```
 pip install -r requirements.txt
 ```
