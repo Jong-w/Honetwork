@@ -11,7 +11,7 @@ import gc
 parser = argparse.ArgumentParser(description='MDM')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='MDM_Adventure',
+parser.add_argument('--run-name', type=str, default='MDM_Frostbite_IM',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
@@ -21,7 +21,7 @@ parser.add_argument('--dynamic', type=int, default=0,
                     help='dynamic_neural_network or not')
 parser.add_argument('--lr', type=float, default=0.0005,
                     help='learning rate')
-parser.add_argument('--env-name', type=str, default='AdventureNoFrameskip-v4',
+parser.add_argument('--env-name', type=str, default='FrostbiteNoFrameskip-v4',
                     help='gym environment name')
 parser.add_argument('--num-workers', type=int, default=32,
                     help='number of parallel environments to run')
@@ -132,7 +132,8 @@ def experiment(args):
             state_goal_3_cos = MDMS.state_goal_cosine(states_total, goals_3, masks, 3).to('cpu')
             state_goal_2_cos = MDMS.state_goal_cosine(states_total, goals_2, masks, 2).to('cpu')
 
-            total_intrinsic = state_goal_5_cos + state_goal_4_cos + state_goal_3_cos + state_goal_2_cos
+            #total_intrinsic = state_goal_5_cos + state_goal_4_cos + state_goal_3_cos + state_goal_2_cos
+            total_intrinsic = state_goal_2_cos
 
             add_ = {'r': torch.FloatTensor(reward).unsqueeze(-1).to('cpu'),
                 'r_i': MDMS.intrinsic_reward(states_total, goals_2, masks).to('cpu'),

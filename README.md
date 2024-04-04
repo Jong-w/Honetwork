@@ -2,7 +2,7 @@
 ## From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals
 
 
-This code is for "From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals". Our work introduced hierarchy-drop, novel approach that dynamically tailors hierarchies in accordance with environmental needs to improve the efficiency and effectiveness of learning in complex environments.
+This code is for "From Extensive to Efficient: Dynamic Hierarchical Reinforcement Learning withAdaptive Long Short-Term Goals". Our work introduced hierarchy-drop, novel approach that dynamically tailors hierarchies in accordance with environmental needs to improve the efficiency and effectiveness of learning in dynamic environments.
 
 Authors: Jong Won Kim, Dongjae Kim
 
@@ -36,7 +36,7 @@ pip install -r requirements.txt
 
 ## Train
 
-To train our model, execute the following command. This example uses the FrostbiteNoFrameskip-v4 environment, but the parameters can be adjusted to fit other environments or specific requirements. The gamma values represent the discount factors for different levels of the hierarchy, affecting how future rewards are valued at each level. The hidden-dim-Hierarchies and time_horizon_Hierarchies parameters define the size of the hidden layers and the time horizons for the goals at each hierarchical level, respectively. Adjusting these parameters allows for fine-tuning the model's performance and learning efficiency.
+To train our model, execute the following command. This example uses the FrostbiteNoFrameskip-v4 environment, but the parameters can be adjusted to fit other environments or specific requirements. The gamma values represent the discount factors for different levels of the hierarchy, affecting how future rewards are valued at each level. The hidden-dim-Hierarchies and time_horizon_Hierarchies parameters define the size of the hidden layers and the time horizons for the goals at each hierarchical level, respectively. 
 
 ```
 python MDM_main.py \
@@ -53,7 +53,7 @@ python MDM_main.py \
 
 
 ## Result
-Our approach has been tested across a variety of environments, demonstrating its robustness and effectiveness in enhancing learning efficiency and performance. The images below showcase our model's performance compared to baseline models, across different game environments such as Frostbite, Gravitar, Q*bert, and Kangaroo.
+Our approach has been tested across a variety of environments, demonstrating its learning efficiency. The images below showcase our model's performance compared to baseline models, across different game environments such as Frostbite, Gravitar, Q*bert, and Kangaroo.
 
 <p align="center">
 <img src="./img/FROSTBITE.png" width="300" height="200">
