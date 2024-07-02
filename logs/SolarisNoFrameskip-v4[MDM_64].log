@@ -1,0 +1,9 @@
+2024/04/29 10:51:06 AM Namespace(run_name='MDM_Solaris', seed=0, dynamic=0, lr=0.0005, env_name='SolarisNoFrameskip-v4', num_workers=32, num_steps=400, max_steps=100000000, cuda=True, grad_clip=5.0, entropy_coef=0.01, gamma_5=0.999, gamma_4=0.999, gamma_3=0.999, gamma_2=0.999, gamma_1=0.99, alpha=0.5, eps=1e-07, hidden_dim_Hierarchies=[16, 256, 256, 256, 256], time_horizon_Hierarchies=[1, 10, 15, 20, 25], lambda_policy_im=0.1, hierarchy_eps=1e-10)
+2024/04/29 10:54:16 AM > ep = 1 | total steps = 106848 | reward = 1080.0 | length = 3340 | hours = 0.053
+2024/04/29 10:54:57 AM > ep = 2 | total steps = 131648 | reward = 1900.0 | length = 4115 | hours = 0.064
+2024/04/29 10:55:00 AM > ep = 3 | total steps = 134112 | reward = 500.0 | length = 4192 | hours = 0.065
+2024/04/29 10:55:16 AM > ep = 4 | total steps = 142880 | reward = 1620.0 | length = 4466 | hours = 0.069
+2024/04/29 10:55:36 AM > ep = 5 | total steps = 154912 | reward = 2620.0 | length = 4842 | hours = 0.075
+2024/04/29 10:55:36 AM > ep = 6 | total steps = 155552 | reward = 1080.0 | length = 4862 | hours = 0.075
+2024/04/29 10:55:48 AM > ep = 7 | total steps = 164160 | reward = 3560.0 | length = 5131 | hours = 0.078
+2024/04/29 10:56:00 AM > ep = 8 | total steps = 170272 | reward = 2620.0 | length = 5322 | hours = 0.082

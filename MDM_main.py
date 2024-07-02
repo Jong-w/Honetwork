@@ -1,4 +1,5 @@
 from logger import Logger
+import gym
 from MDM import MDM, mp_loss
 from utils import make_envs, take_action, init_obj
 from storage import Storage
@@ -11,7 +12,7 @@ import gc
 parser = argparse.ArgumentParser(description='MDM')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='MDM_Frostbite_IM',
+parser.add_argument('--run-name', type=str, default='MDM_testing',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
@@ -54,7 +55,7 @@ parser.add_argument('--eps', type=float, default=float(1e-7),
                     help='Random Gausian goal for exploration')
 parser.add_argument('--hidden-dim-Hierarchies', type=int, default=[16, 256, 256, 256, 256],
                     help='Hidden dim (d)')
-parser.add_argument('--time_horizon_Hierarchies', type=int, default=[1, 10, 15, 20, 25],
+parser.add_argument('--time_horizon_Hierarchies', type=int, default=[1, 10, 15, 20, 25], #[1, 10, 15, 20, 25],
                     help=' horizon (c_s)')
 
 parser.add_argument('--lambda-policy-im', type=float, default=0.1)
@@ -132,8 +133,8 @@ def experiment(args):
             state_goal_3_cos = MDMS.state_goal_cosine(states_total, goals_3, masks, 3).to('cpu')
             state_goal_2_cos = MDMS.state_goal_cosine(states_total, goals_2, masks, 2).to('cpu')
 
-            #total_intrinsic = state_goal_5_cos + state_goal_4_cos + state_goal_3_cos + state_goal_2_cos
-            total_intrinsic = state_goal_2_cos
+            total_intrinsic = state_goal_5_cos + state_goal_4_cos + state_goal_3_cos + state_goal_2_cos
+            #total_intrinsic = state_goal_2_cos
 
             add_ = {'r': torch.FloatTensor(reward).unsqueeze(-1).to('cpu'),
                 'r_i': MDMS.intrinsic_reward(states_total, goals_2, masks).to('cpu'),
@@ -191,15 +192,34 @@ def experiment(args):
 
 
 def main(args):
+    all_envs = gym.envs.registry.all()
+    noframeskip_v4_no_ram_envs = [env.id for env in all_envs if
+                                  ((env.id.endswith('NoFrameskip-v4')) and ('-ram' not in env.id) and ('Defender' not in env.id))]
+
     run_name = args.run_name
-    for seed in range(1):
-        wandb.init(project="MDM_DK_testing",
+    #for seed in range(len(noframeskip_v4_no_ram_envs)):
+    '''for seed in range(len(noframeskip_v4_no_ram_envs)):
+        env_name_ = noframeskip_v4_no_ram_envs[seed]
+        wandb.init(project="MDM_whole_env",
                    config=args.__dict__
                    )
         args.seed = seed
-        wandb.run.name = f"{run_name}_runseed={seed}"
+        args.env_name = env_name_
+        wandb.run.name = f"{run_name}_{env_name_[:-14]}"
         experiment(args)
-        wandb.finish()
+        wandb.finish()'''
+
+    #env_name_ = noframeskip_v4_no_ram_envs[seed]
+    wandb.init(project="MDM_whole_env",
+               config=args.__dict__
+               )
+    args.seed = 0
+    #args.env_name = env_name_
+    #wandb.run.name = f"{run_name}_{env_name_[:-14]}"
+    wandb.run.name = f"{run_name}"
+    experiment(args)
+    wandb.finish()
+
 
 
 if __name__ == '__main__':

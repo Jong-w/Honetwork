@@ -204,7 +204,7 @@ class Perception(nn.Module):
     def forward(self, x, hidden, mask):
         x1 = self.percept(x)
         return x1
-
+'''
 class Policy_Network(nn.Module):
     def __init__(self, d, time_horizon, num_workers):
         super().__init__()
@@ -217,6 +217,25 @@ class Policy_Network(nn.Module):
         policy_network_result = (policy_network_result - policy_network_result.detach().min(1, keepdim=True)[0]) / \
                                 (policy_network_result.detach().max(1, keepdim=True)[0] - policy_network_result.detach().min(1, keepdim=True)[0])
         policy_network_result = policy_network_result.round()
+        return policy_network_result.type(torch.int), hidden
+
+    def hierarchy_drop_reward(self, reward, hierarchy_selected):
+        #drop_reward = (reward - (hierarchy_selected.sum(dim=1).reshape(self.num_workers, 1))) / (reward+1)
+        drop_reward = reward
+        return drop_reward'''
+
+class Policy_Network(nn.Module):
+    def __init__(self, d, time_horizon, num_workers):
+        super().__init__()
+        self.Mrnn = DilatedLSTM(d*4, 3, time_horizon)
+        self.num_workers = num_workers
+    def forward(self, z, goal_5_norm, goal_4_norm, goal_3_norm, hierarchies_selected, time_horizon, hidden, mask, step):
+        goal_x_info = torch.cat(([goal_5_norm.detach(), goal_4_norm.detach(), goal_3_norm.detach(), z]), dim=1)
+        hidden = (mask * hidden[0], mask * hidden[1])
+        policy_network_result, hidden = self.Mrnn(goal_x_info, hidden)
+        policy_network_result = (policy_network_result - policy_network_result.detach().min(1, keepdim=True)[0]) / \
+                                (policy_network_result.detach().max(1, keepdim=True)[0] - policy_network_result.detach().min(1, keepdim=True)[0])
+        #policy_network_result = policy_network_result.round()
         return policy_network_result.type(torch.int), hidden
 
     def hierarchy_drop_reward(self, reward, hierarchy_selected):
