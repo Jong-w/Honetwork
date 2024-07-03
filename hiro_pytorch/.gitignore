@@ -1,0 +1,9 @@
+*.h5
+*.pyc
+.vscode
+.idea
+__pycach__/
+test/*
+media/*
+log/*
+model/*

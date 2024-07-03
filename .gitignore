@@ -68,3 +68,6 @@
 /logs/MiniGrid-FourRooms-v0[MPnets_64]/events.out.tfevents.1681158948.DESKTOP-LTTJJ7Q.3096.4
 /logs/MiniGrid-FourRooms-v0[MPnets_64].log
 /testPickleFile.pickle
+/logs/
+/models/
+/wandb/
