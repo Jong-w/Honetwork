@@ -1,0 +1,34 @@
+
+20240702_173215
+C:\Users\gpu_win\anaconda3\envs\MDM\lib\site-packages\gym\utils\seeding.py:53: DeprecationWarning: [33mWARN: Function `rng.randn(*size)` is marked as deprecated and will be removed in the future. Please use `rng.standard_normal(size)` instead.
+  deprecation(
+C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py:1211: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  n_sg5_n, n_sg4_n, n_sg3_n, n_sg2_n = self.Goal_Normalizer(torch.tensor(n_sg5), n_sg4, n_sg3, n_sg2)
+C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py:268: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  result = (self.linear(torch.tensor(goal_prev, dtype=torch.float32)).to(device) * hierarchy_drop.to(device)) + goal_now.to(device)
+C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py:270: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  result = (self.linear(torch.tensor(goal_prev, dtype=torch.float32)).to(device)) + goal_now.to(device)
+C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py:1299: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  sg = torch.tensor(sg)
+C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py:1308: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  sg = torch.tensor(sg)
+C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py:1317: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  sg = torch.tensor(sg)
+C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py:1326: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  sg = torch.tensor(sg)
+Traceback (most recent call last):
+  File "C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\main.py", line 208, in <module>
+    trainer = Trainer(args, env, agent, experiment_name)
+  File "C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\main.py", line 58, in train
+    losses, td_errors = self.agent.train(global_step)
+  File "C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py", line 1264, in train
+    loss, td_error = self.low_con.train(self.replay_buffer_low)
+  File "C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py", line 796, in train
+    return self._train(states, sgoals, actions, rewards, n_states, n_sgoals, not_done, "1_")
+  File "C:\Users\gpu_win\PycharmProjects\MDM_jongwon\hiro_pytorch\hiro\models.py", line 229, in _train
+    critic_loss.backward(retain_graph=True)
+  File "C:\Users\gpu_win\anaconda3\envs\MDM\lib\site-packages\torch\_tensor.py", line 487, in backward
+    torch.autograd.backward(
+  File "C:\Users\gpu_win\anaconda3\envs\MDM\lib\site-packages\torch\autograd\__init__.py", line 200, in backward
+    Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt

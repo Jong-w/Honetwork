@@ -1,0 +1,44 @@
+{
+    "os": "Windows-10-10.0.22631-SP0",
+    "python": "3.9.17",
+    "heartbeatAt": "2024-07-02T08:32:15.281848",
+    "startedAt": "2024-07-02T08:32:13.978523",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "C:\\Users\\gpu_win\\PycharmProjects\\MDM_jongwon\\hiro_pytorch\\main.py",
+    "codePath": "main.py",
+    "host": "DESKTOP-Q811UG9",
+    "username": "gpu_win",
+    "executable": "C:\\Users\\gpu_win\\anaconda3\\envs\\MDM\\python.exe",
+    "cpu_count": 6,
+    "cpu_count_logical": 12,
+    "cpu_freq": {
+        "current": 3900.0,
+        "min": 0.0,
+        "max": 3900.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3900.0,
+            "min": 0.0,
+            "max": 3900.0
+        }
+    ],
+    "disk": {
+        "total": 476.18749618530273,
+        "used": 312.21832275390625
+    },
+    "gpu": "NVIDIA GeForce RTX 3060 Ti",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3060 Ti",
+            "memory_total": 8589934592
+        }
+    ],
+    "memory": {
+        "total": 15.342872619628906
+    }
+}
