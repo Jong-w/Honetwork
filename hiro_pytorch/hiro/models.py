@@ -75,12 +75,12 @@ class TD3Actor(nn.Module):
             scale = get_tensor(scale)
         self.scale = nn.Parameter(scale.clone().detach().float(), requires_grad=False)
 
-        self.l1 = nn.Linear(state_dim + goal_dim, 300)
-        self.l2 = nn.Linear(300, 300)
-        self.l3 = nn.Linear(300, action_dim)
+        self.l1 = nn.Linear(state_dim + goal_dim, 300).to(device)
+        self.l2 = nn.Linear(300, 300).to(device)
+        self.l3 = nn.Linear(300, action_dim).to(device)
 
     def forward(self, state, goal):
-        a = F.relu(self.l1(torch.cat([state, goal], 1)))
+        a = F.relu(self.l1(torch.cat([state, goal], 1).type(torch.float32)))
         a = F.relu(self.l2(a))
         return self.scale * torch.tanh(self.l3(a))
 
@@ -88,16 +88,16 @@ class TD3Critic(nn.Module):
     def __init__(self, state_dim, goal_dim, action_dim):
         super(TD3Critic, self).__init__()
         # Q1
-        self.l1 = nn.Linear(state_dim + goal_dim + action_dim, 300)
-        self.l2 = nn.Linear(300, 300)
-        self.l3 = nn.Linear(300, 1)
+        self.l1 = nn.Linear(state_dim + goal_dim + action_dim, 300).to(device)
+        self.l2 = nn.Linear(300, 300).to(device)
+        self.l3 = nn.Linear(300, 1).to(device)
         # Q2
-        self.l4 = nn.Linear(state_dim + goal_dim + action_dim, 300)
-        self.l5 = nn.Linear(300, 300)
-        self.l6 = nn.Linear(300, 1)
+        self.l4 = nn.Linear(state_dim + goal_dim + action_dim, 300).to(device)
+        self.l5 = nn.Linear(300, 300).to(device)
+        self.l6 = nn.Linear(300, 1).to(device)
 
     def forward(self, state, goal, action):
-        sa = torch.cat([state, goal, action], 1)
+        sa = torch.cat([state, goal, action], 1).type(torch.float32)
 
         q = F.relu(self.l1(sa))
         q = F.relu(self.l2(q))
@@ -254,12 +254,12 @@ class TD3Controller(object):
         return self._train(states, goals, actions, rewards, n_states, goals, not_done)
 
     def policy(self, state, goal, to_numpy=True):
-        state = get_tensor(state)
-        goal = get_tensor(goal)
+        #state = get_tensor(state)
+        #goal = get_tensor(goal)
         action = self.actor(state, goal)
 
-        if to_numpy:
-            return action.cpu().data.numpy().squeeze()
+        #if to_numpy:
+        #    return action.cpu().data.numpy().squeeze()
 
         return action.squeeze()
 
@@ -322,21 +322,25 @@ class Hierarchy5(TD3Controller):
 
         # Shape: (batch_size, 1, subgoal_dim)
         # diff = 1
-        diff_goal = (np.array(last_s) -
-                     np.array(first_s))[:, np.newaxis, :self.action_dim]
+        diff_goal = (torch.stack(last_s, dim=0) -
+                     torch.stack(first_s, dim=0))[:, np.newaxis, :self.action_dim]
 
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = np.array(sgoals)[:, np.newaxis, :]
-        random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
-                                        size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
+        #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
+        random_goals = torch.normal(mean=diff_goal, std=scale_tensor.expand(batch_size, candidate_goals, -1))
+
+        self.scale = torch.tensor(self.scale).to(device)
         random_goals = random_goals.clip(-self.scale, self.scale)
 
         # Shape: (batch_size, 10, subgoal_dim)
-        candidates = np.concatenate([original_goal, diff_goal, random_goals], axis=1)
+        candidates = torch.concatenate([original_goal, diff_goal, random_goals], axis=1)
         #states = np.array(states)[:, :-1, :]
-        actions = np.array(actions)
+        actions = torch.tensor(actions)
         seq_len = len(states[0])
 
         # For ease
@@ -353,7 +357,7 @@ class Hierarchy5(TD3Controller):
         # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
         # batched_candidates = batched_candidates.transpose(1, 0, 2)
 
-        policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)
+        policy_actions = torch.zeros((ncands, new_batch_sz) + action_dim)
 
         for c in range(ncands):
             subgoal = candidates[:,c]
@@ -361,12 +365,12 @@ class Hierarchy5(TD3Controller):
             candidate = candidate.reshape(*goal_shape)
             policy_actions[c] = low_con.policy(observations, candidate)
 
-        difference = (policy_actions - true_actions)
-        difference = np.where(difference != -np.inf, difference, 0)
-        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)
+        difference = (policy_actions.to(device) - true_actions.to(device))
+        difference = torch.where(difference != -torch.inf, difference, 0)
+        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).permute(1, 0, 2, 3)
 
-        logprob = -0.5*np.sum(np.linalg.norm(difference, axis=-1)**2, axis=-1)
-        max_indices = np.argmax(logprob, axis=-1)
+        logprob = -0.5*torch.sum(torch.linalg.norm(difference, axis=-1)**2, axis=-1)
+        max_indices = torch.argmax(logprob, axis=-1)
 
         return candidates[np.arange(batch_size), max_indices]
 
@@ -379,11 +383,11 @@ class Hierarchy5(TD3Controller):
         actions = self.off_policy_corrections(
             low_con,
             replay_buffer.batch_size,
-            actions.cpu().data.numpy(),
-            states_arr.cpu().data.numpy(),
-            actions_arr.cpu().data.numpy())
+            actions,
+            states_arr,
+            actions_arr)
 
-        actions = get_tensor(actions)
+        #actions = get_tensor(actions)
         return self._train(states, goals, actions, rewards, n_states, goals, not_done, "5_")
 
 class Hierarchy4(TD3Controller):
@@ -416,21 +420,25 @@ class Hierarchy4(TD3Controller):
 
         # Shape: (batch_size, 1, subgoal_dim)
         # diff = 1
-        diff_goal = (np.array(last_s) -
-                     np.array(first_s))[:, np.newaxis, :self.action_dim]
+        diff_goal = (torch.stack(last_s, dim=0) -
+                     torch.stack(first_s, dim=0))[:, np.newaxis, :self.action_dim]
 
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = np.array(sgoals)[:, np.newaxis, :]
-        random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
-                                        size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
+        #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
+        random_goals = torch.normal(mean=diff_goal, std=scale_tensor.expand(batch_size, candidate_goals, -1))
+
+        self.scale = torch.tensor(self.scale).to(device)
         random_goals = random_goals.clip(-self.scale, self.scale)
 
         # Shape: (batch_size, 10, subgoal_dim)
-        candidates = np.concatenate([original_goal, diff_goal, random_goals], axis=1)
+        candidates = torch.concatenate([original_goal, diff_goal, random_goals], axis=1)
         #states = np.array(states)[:, :-1, :]
-        actions = np.array(actions)
+        actions = torch.tensor(actions)
         seq_len = len(states[0])
 
         # For ease
@@ -447,7 +455,7 @@ class Hierarchy4(TD3Controller):
         # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
         # batched_candidates = batched_candidates.transpose(1, 0, 2)
 
-        policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)
+        policy_actions = torch.zeros((ncands, new_batch_sz) + action_dim)
 
         for c in range(ncands):
             subgoal = candidates[:,c]
@@ -455,12 +463,12 @@ class Hierarchy4(TD3Controller):
             candidate = candidate.reshape(*goal_shape)
             policy_actions[c] = low_con.policy(observations, candidate)
 
-        difference = (policy_actions - true_actions)
-        difference = np.where(difference != -np.inf, difference, 0)
-        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)
+        difference = (policy_actions.to(device) - true_actions.to(device))
+        difference = torch.where(difference != -torch.inf, difference, 0)
+        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).permute(1, 0, 2, 3)
 
-        logprob = -0.5*np.sum(np.linalg.norm(difference, axis=-1)**2, axis=-1)
-        max_indices = np.argmax(logprob, axis=-1)
+        logprob = -0.5*torch.sum(torch.linalg.norm(difference, axis=-1)**2, axis=-1)
+        max_indices = torch.argmax(logprob, axis=-1)
 
         return candidates[np.arange(batch_size), max_indices]
 
@@ -473,11 +481,11 @@ class Hierarchy4(TD3Controller):
         actions = self.off_policy_corrections(
             low_con,
             replay_buffer.batch_size,
-            actions.cpu().data.numpy(),
-            states_arr.cpu().data.numpy(),
-            actions_arr.cpu().data.numpy())
+            actions,
+            states_arr,
+            actions_arr)
 
-        actions = get_tensor(actions)
+        #actions = get_tensor(actions)
         return self._train(states, goals, actions, rewards, n_states, goals, not_done, "4_")
 
 class Hierarchy3(TD3Controller):
@@ -510,21 +518,25 @@ class Hierarchy3(TD3Controller):
 
         # Shape: (batch_size, 1, subgoal_dim)
         # diff = 1
-        diff_goal = (np.array(last_s) -
-                     np.array(first_s))[:, np.newaxis, :self.action_dim]
+        diff_goal = (torch.stack(last_s, dim=0) -
+                     torch.stack(first_s, dim=0))[:, np.newaxis, :self.action_dim]
 
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = np.array(sgoals)[:, np.newaxis, :]
-        random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
-                                        size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
+        #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
+        random_goals = torch.normal(mean=diff_goal, std=scale_tensor.expand(batch_size, candidate_goals, -1))
+
+        self.scale = torch.tensor(self.scale).to(device)
         random_goals = random_goals.clip(-self.scale, self.scale)
 
         # Shape: (batch_size, 10, subgoal_dim)
-        candidates = np.concatenate([original_goal, diff_goal, random_goals], axis=1)
+        candidates = torch.concatenate([original_goal, diff_goal, random_goals], axis=1)
         #states = np.array(states)[:, :-1, :]
-        actions = np.array(actions)
+        actions = torch.tensor(actions)
         seq_len = len(states[0])
 
         # For ease
@@ -541,7 +553,7 @@ class Hierarchy3(TD3Controller):
         # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
         # batched_candidates = batched_candidates.transpose(1, 0, 2)
 
-        policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)
+        policy_actions = torch.zeros((ncands, new_batch_sz) + action_dim)
 
         for c in range(ncands):
             subgoal = candidates[:,c]
@@ -549,12 +561,12 @@ class Hierarchy3(TD3Controller):
             candidate = candidate.reshape(*goal_shape)
             policy_actions[c] = low_con.policy(observations, candidate)
 
-        difference = (policy_actions - true_actions)
-        difference = np.where(difference != -np.inf, difference, 0)
-        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)
+        difference = (policy_actions.to(device) - true_actions.to(device))
+        difference = torch.where(difference != -torch.inf, difference, 0)
+        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).permute(1, 0, 2, 3)
 
-        logprob = -0.5*np.sum(np.linalg.norm(difference, axis=-1)**2, axis=-1)
-        max_indices = np.argmax(logprob, axis=-1)
+        logprob = -0.5*torch.sum(torch.linalg.norm(difference, axis=-1)**2, axis=-1)
+        max_indices = torch.argmax(logprob, axis=-1)
 
         return candidates[np.arange(batch_size), max_indices]
 
@@ -567,11 +579,11 @@ class Hierarchy3(TD3Controller):
         actions = self.off_policy_corrections(
             low_con,
             replay_buffer.batch_size,
-            actions.cpu().data.numpy(),
-            states_arr.cpu().data.numpy(),
-            actions_arr.cpu().data.numpy())
+            actions,
+            states_arr,
+            actions_arr)
 
-        actions = get_tensor(actions)
+        #actions = get_tensor(actions)
         return self._train(states, goals, actions, rewards, n_states, goals, not_done, "3_")
 
 
@@ -605,21 +617,25 @@ class Hierarchy2(TD3Controller):
 
         # Shape: (batch_size, 1, subgoal_dim)
         # diff = 1
-        diff_goal = (np.array(last_s) -
-                     np.array(first_s))[:, np.newaxis, :self.action_dim]
+        diff_goal = (torch.stack(last_s, dim=0) -
+                     torch.stack(first_s, dim=0))[:, np.newaxis, :self.action_dim]
 
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = np.array(sgoals)[:, np.newaxis, :]
-        random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
-                                        size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
+        #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
+        scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
+        random_goals = torch.normal(mean=diff_goal, std=scale_tensor.expand(batch_size, candidate_goals, -1))
+
+        self.scale = torch.tensor(self.scale).to(device)
         random_goals = random_goals.clip(-self.scale, self.scale)
 
         # Shape: (batch_size, 10, subgoal_dim)
-        candidates = np.concatenate([original_goal, diff_goal, random_goals], axis=1)
+        candidates = torch.concatenate([original_goal, diff_goal, random_goals], axis=1)
         #states = np.array(states)[:, :-1, :]
-        actions = np.array(actions)
+        actions = torch.tensor(actions)
         seq_len = len(states[0])
 
         # For ease
@@ -636,7 +652,7 @@ class Hierarchy2(TD3Controller):
         # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
         # batched_candidates = batched_candidates.transpose(1, 0, 2)
 
-        policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)
+        policy_actions = torch.zeros((ncands, new_batch_sz) + action_dim)
 
         for c in range(ncands):
             subgoal = candidates[:,c]
@@ -644,12 +660,12 @@ class Hierarchy2(TD3Controller):
             candidate = candidate.reshape(*goal_shape)
             policy_actions[c] = low_con.policy(observations, candidate)
 
-        difference = (policy_actions - true_actions)
-        difference = np.where(difference != -np.inf, difference, 0)
-        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)
+        difference = (policy_actions.to(device) - true_actions.to(device))
+        difference = torch.where(difference != -torch.inf, difference, 0)
+        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).permute(1, 0, 2, 3)
 
-        logprob = -0.5*np.sum(np.linalg.norm(difference, axis=-1)**2, axis=-1)
-        max_indices = np.argmax(logprob, axis=-1)
+        logprob = -0.5*torch.sum(torch.linalg.norm(difference, axis=-1)**2, axis=-1)
+        max_indices = torch.argmax(logprob, axis=-1)
 
         return candidates[np.arange(batch_size), max_indices]
 
@@ -662,107 +678,12 @@ class Hierarchy2(TD3Controller):
         actions = self.off_policy_corrections(
             low_con,
             replay_buffer.batch_size,
-            actions.cpu().data.numpy(),
-            states_arr.cpu().data.numpy(),
-            actions_arr.cpu().data.numpy())
+            actions,
+            states_arr,
+            actions_arr)
 
-        actions = get_tensor(actions)
+        #actions = get_tensor(actions)
         return self._train(states, goals, actions, rewards, n_states, goals, not_done, "2_")
-
-
-class HigherController(TD3Controller):
-    def __init__(
-        self,
-        state_dim,
-        goal_dim,
-        action_dim,
-        scale,
-        model_path,
-        actor_lr=0.0001,
-        critic_lr=0.001,
-        expl_noise=1.0,
-        policy_noise=0.2,
-        noise_clip=0.5,
-        gamma=0.99,
-        policy_freq=2,
-        tau=0.005):
-        super(HigherController, self).__init__(
-            state_dim, goal_dim, action_dim, scale, model_path,
-            actor_lr, critic_lr, expl_noise, policy_noise,
-            noise_clip, gamma, policy_freq, tau
-        )
-        self.name = 'high'
-        self.action_dim = action_dim
-
-    def off_policy_corrections(self, low_con, batch_size, sgoals, states, actions, candidate_goals=8):
-        first_s = [s[0] for s in states] # First x
-        last_s = [s[-1] for s in states] # Last x
-
-        # Shape: (batch_size, 1, subgoal_dim)
-        # diff = 1
-        diff_goal = (np.array(last_s) -
-                     np.array(first_s))[:, np.newaxis, :self.action_dim]
-
-        # Shape: (batch_size, 1, subgoal_dim)
-        # original = 1
-        # random = candidate_goals
-        original_goal = np.array(sgoals)[:, np.newaxis, :]
-        random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
-                                        size=(batch_size, candidate_goals, original_goal.shape[-1]))
-        random_goals = random_goals.clip(-self.scale, self.scale)
-
-        # Shape: (batch_size, 10, subgoal_dim)
-        candidates = np.concatenate([original_goal, diff_goal, random_goals], axis=1)
-        #states = np.array(states)[:, :-1, :]
-        actions = np.array(actions)
-        seq_len = len(states[0])
-
-        # For ease
-        new_batch_sz = seq_len * batch_size
-        action_dim = actions[0][0].shape
-        obs_dim = states[0][0].shape
-        ncands = candidates.shape[1]
-
-        true_actions = actions.reshape((new_batch_sz,) + action_dim)
-        observations = states.reshape((new_batch_sz,) + obs_dim)
-        goal_shape = (new_batch_sz, self.action_dim)
-        # observations = get_obs_tensor(observations, sg_corrections=True)
-
-        # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
-        # batched_candidates = batched_candidates.transpose(1, 0, 2)
-
-        policy_actions = np.zeros((ncands, new_batch_sz) + action_dim)
-
-        for c in range(ncands):
-            subgoal = candidates[:,c]
-            candidate = (subgoal + states[:, 0, :self.action_dim])[:, None] - states[:, :, :self.action_dim]
-            candidate = candidate.reshape(*goal_shape)
-            policy_actions[c] = low_con.policy(observations, candidate)
-
-        difference = (policy_actions - true_actions)
-        difference = np.where(difference != -np.inf, difference, 0)
-        difference = difference.reshape((ncands, batch_size, seq_len) + action_dim).transpose(1, 0, 2, 3)
-
-        logprob = -0.5*np.sum(np.linalg.norm(difference, axis=-1)**2, axis=-1)
-        max_indices = np.argmax(logprob, axis=-1)
-
-        return candidates[np.arange(batch_size), max_indices]
-
-    def train(self, replay_buffer, low_con):
-        if not self._initialized:
-            self._initialize_target_networks()
-
-        states, goals, actions, n_states, rewards, not_done, states_arr, actions_arr = replay_buffer.sample()
-
-        actions = self.off_policy_corrections(
-            low_con,
-            replay_buffer.batch_size,
-            actions.cpu().data.numpy(),
-            states_arr.cpu().data.numpy(),
-            actions_arr.cpu().data.numpy())
-
-        actions = get_tensor(actions)
-        return self._train(states, goals, actions, rewards, n_states, goals, not_done)
 
 class LowerController(TD3Controller):
     def __init__(

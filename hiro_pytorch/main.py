@@ -142,6 +142,8 @@ if __name__ == '__main__':
     parser.add_argument('--time_horizon', default=[1, 10, 15, 20, 25], type=float)
     args = parser.parse_args()
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     wandb.init(project="MDM_whole_env",
                config=args.__dict__
                )
