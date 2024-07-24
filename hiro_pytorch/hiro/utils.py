@@ -18,7 +18,7 @@ def get_tensor(z):
             z = z.detach().cpu().numpy()
         return var(torch.FloatTensor(z.copy())).unsqueeze(0)
     else:
-        return var(torch.FloatTensor(z.copy()))
+        return var(z)
 
 class Logger():
     def __init__(self, log_path):
@@ -39,7 +39,7 @@ def _is_update(episode, freq, ignore=0, rem=0):
         return True
     return False
 
-
+'''
 class ReplayBuffer():
     def __init__(self, state_dim, action_dim, buffer_size, batch_size):
         self.buffer_size = buffer_size
@@ -74,7 +74,7 @@ class ReplayBuffer():
             torch.FloatTensor(self.reward[ind]).to(self.device),
             torch.FloatTensor(self.not_done[ind]).to(self.device),
         )
-
+'''
 def record_experience_to_csv(args, experiment_name, csv_name='experiments.csv'):
     # append DATE_TIME to dict
     d = vars(args)

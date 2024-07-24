@@ -8,10 +8,14 @@ import argparse
 import torch
 import gc
 
+gc.collect()
+
+torch.cuda.empty_cache()
+
 parser = argparse.ArgumentParser(description='MDM')
 
 # EXPERIMENT RELATED PARAMS
-parser.add_argument('--run-name', type=str, default='MDM_Frostbite_IM',
+parser.add_argument('--run-name', type=str, default='MDM_80',
                     help='run name for the logger.')
 parser.add_argument('--seed', type=int, default=0,
                     help='reproducibility seed.')
@@ -27,7 +31,7 @@ parser.add_argument('--num-workers', type=int, default=32,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
-parser.add_argument('--max-steps', type=int, default=int(1e8),
+parser.add_argument('--max-steps', type=int, default=int(1e5),
                     help='maximum number of training steps in total')
 parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
@@ -54,7 +58,7 @@ parser.add_argument('--eps', type=float, default=float(1e-7),
                     help='Random Gausian goal for exploration')
 parser.add_argument('--hidden-dim-Hierarchies', type=int, default=[16, 256, 256, 256, 256],
                     help='Hidden dim (d)')
-parser.add_argument('--time_horizon_Hierarchies', type=int, default=[1, 10, 15, 20, 25],
+parser.add_argument('--time_horizon_Hierarchies', type=int, default=[1, 10, 20, 40, 80],
                     help=' horizon (c_s)')
 
 parser.add_argument('--lambda-policy-im', type=float, default=0.1)
@@ -69,7 +73,6 @@ def experiment(args):
     cuda_is_available = torch.cuda.is_available() and args.cuda
     device = torch.device("cuda" if cuda_is_available else "cpu")
     args.device = device
-
     torch.manual_seed(args.seed)
     if cuda_is_available:
         torch.backends.cudnn.deterministic = True
@@ -187,17 +190,25 @@ def experiment(args):
         'args': args,
         'processor_mean': MDMS.preprocessor.rms.mean,
         'optim': optimizer.state_dict()},
-        f'models/{args.env_name}_{args.run_name}_steps={step}.pt')
+        f'models_new_testing/{args.env_name}_{args.run_name}_steps={step}.pt')
 
 
 def main(args):
+    import gym
+    all_envs = gym.envs.registry.all()
+    noframeskip_v4_no_ram_envs = [env.id for env in all_envs if
+                                  ((env.id.endswith('NoFrameskip-v4')) and ('-ram' not in env.id) and ('Defender' not in env.id))]
+
     run_name = args.run_name
-    for seed in range(1):
-        wandb.init(project="MDM_DK_testing",
+    #for seed in range(len(noframeskip_v4_no_ram_envs)):
+    for seed in range(len(noframeskip_v4_no_ram_envs)):
+        env_name_ = noframeskip_v4_no_ram_envs[seed]
+        wandb.init(project="just_testing",
                    config=args.__dict__
                    )
         args.seed = seed
-        wandb.run.name = f"{run_name}_runseed={seed}"
+        args.env_name = env_name_
+        wandb.run.name = f"{run_name}_{env_name_[:-14]}"
         experiment(args)
         wandb.finish()
 

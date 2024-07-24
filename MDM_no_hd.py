@@ -8,7 +8,7 @@ from dilated_lstm import DilatedLSTM
 import numpy as np
 import random
 import gc
-class MDM(nn.Module):
+class MDM_no_hd(nn.Module):
     def __init__(self,
                  num_workers,
                  input_dim,

@@ -3,7 +3,7 @@ import torch
 
 import numpy as np
 from utils import make_envs, take_action, init_obj
-from a3c import FeudalNetwork, feudal_loss
+from a3c import a3c, feudal_loss
 from storage import Storage
 from logger import Logger
 import wandb
@@ -74,7 +74,7 @@ def experiment(args):
         torch.backends.cudnn.benchmark = False
 
     envs = make_envs(args.env_name, args.num_workers)
-    feudalnet = FeudalNetwork(
+    feudalnet = a3c(
         num_workers=args.num_workers,
         input_dim=envs.observation_space.shape,
         hidden_dim_manager=args.hidden_dim_manager,

@@ -10,6 +10,15 @@ from hiro.utils import Logger, _is_update, record_experience_to_csv, listdirs
 from hiro.models import HiroAgent, TD3Agent
 import torch
 import wandb
+import warnings
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+#gym==0.24.1
+
+
+# 경고메세지 끄기
+warnings.filterwarnings(action='ignore')
 
 def run_evaluation(args, env, agent):
     agent.load(args.load_episode)
@@ -38,8 +47,8 @@ class Trainer():
 
         for e in np.arange(self.args.num_episode)+1:
             obs = self.env.reset()
-            fg = torch.Tensor(obs['desired_goal'])
-            s = torch.Tensor(obs['observation'])
+            fg = torch.Tensor(obs['desired_goal']).to(device)
+            s = torch.Tensor(obs['observation']).to(device)
             done = False
 
             step = 0
@@ -66,17 +75,17 @@ class Trainer():
                 step += 1
                 global_step += 1
                 self.agent.end_step()
+                #if ((step % 100) == 0) or done:
+                #    print("step: ", step, "episode_reward: ", episode_reward)
 
-
-
-            wandb.log(
-                {"training/episode/reward": episode_reward,
-                 "training/episode/length": step
-                 }, step=global_step)
+            #wandb.log(
+            #    {"training/episode/reward": episode_reward,
+            #     "training/episode/length": step
+            #     }, step=global_step)
                 
             self.agent.end_episode(e, self.logger)
             self.logger.write('reward/Reward', episode_reward, e)
-            self.evaluate(e)
+            self.evaluate(e, global_step)
 
     def log(self, global_step, data):
         losses, td_errors = data[0], data[1]
@@ -89,7 +98,7 @@ class Trainer():
             for k, v in td_errors.items():
                 self.logger.write('td_error/%s'%(k), v, global_step)
     
-    def evaluate(self, e):
+    def evaluate(self, e, global_step):
         # Print
         if _is_update(e, args.print_freq):
             #agent = copy.deepcopy(self.agent)
@@ -97,13 +106,23 @@ class Trainer():
             rewards, success_rate = agent.evaluate_policy(self.env)
             #rewards, success_rate = self.agent.evaluate_policy(self.env)
             self.logger.write('Success Rate', success_rate, e)
-            
+
             print('episode:{episode:05d}, mean:{mean:.2f}, std:{std:.2f}, median:{median:.2f}, success:{success:.2f}'.format(
-                    episode=e, 
-                    mean=np.mean(rewards), 
-                    std=np.std(rewards), 
-                    median=np.median(rewards), 
+                    episode=e,
+                    mean=np.mean(rewards),
+                    std=np.std(rewards),
+                    median=np.median(rewards),
                     success=success_rate))
+        else:
+            agent = self.agent
+            rewards, success_rate = agent.evaluate_policy(self.env)
+            wandb.log(
+                {"training/episode/reward": rewards,
+                "training/episode/success_rate": success_rate
+                }, step=global_step)
+
+            print("reward: ", rewards, "success_rate: ", success_rate)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -120,7 +139,7 @@ if __name__ == '__main__':
 
     # Training
     parser.add_argument('--num_episode', default=25000, type=int)
-    parser.add_argument('--start_training_steps', default=2500, type=int, help='Unit = Global Step')
+    parser.add_argument('--start_training_steps', default=500, type=int, help='Unit = Global Step')
     parser.add_argument('--writer_freq', default=25, type=int, help='Unit = Global Step')
     # Training (Model Saving)
     parser.add_argument('--subgoal_dim', default=15, type=int)
@@ -135,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--policy_freq_high', default=2, type=int)
     # Replay Buffer
     parser.add_argument('--buffer_size', default=200000, type=int)
-    parser.add_argument('--batch_size', default=100, type=int)
+    parser.add_argument('--batch_size', default=1500, type=int)
     parser.add_argument('--buffer_freq', default=10, type=int) #maybe this can be used as dilation(This provides temporal abstraction,since high-level decisions via µhi are made only every c steps)
     parser.add_argument('--train_freq', default=10, type=int)
     parser.add_argument('--reward_scaling', default=0.1, type=float)
@@ -147,7 +166,7 @@ if __name__ == '__main__':
     wandb.init(project="MDM_whole_env",
                config=args.__dict__
                )
-    wandb.run.name = "HIRO"
+    wandb.run.name = "HIRO_"
 
     # Select or Generate a name for this experiment
     if args.exp_name:

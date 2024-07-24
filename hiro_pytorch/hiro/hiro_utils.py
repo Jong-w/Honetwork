@@ -76,9 +76,9 @@ class LowReplayBuffer(ReplayBuffer):
 class HighReplayBuffer(ReplayBuffer):
     def __init__(self, state_dim, goal_dim, subgoal_dim, action_dim, buffer_size, batch_size, freq):
         super(HighReplayBuffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
-        self.action = np.zeros((buffer_size, subgoal_dim))
-        self.state_arr = np.zeros((buffer_size, freq, state_dim))
-        self.action_arr = np.zeros((buffer_size, freq, action_dim))
+        self.action = torch.zeros((buffer_size, subgoal_dim))
+        self.state_arr = torch.zeros((buffer_size, freq, state_dim))
+        self.action_arr = torch.zeros((buffer_size, freq, action_dim))
 
     def append(self, state, goal, action, n_state, reward, done, state_arr, action_arr):
         self.state[self.ptr] = state
@@ -111,8 +111,8 @@ class Hierarchy5_buffer(ReplayBuffer):
     def __init__(self, state_dim, goal_dim, subgoal_dim, action_dim, buffer_size, batch_size, freq):
         super(Hierarchy5_buffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
         self.action = torch.zeros((buffer_size, subgoal_dim))
-        self.state_arr = np.zeros((buffer_size, freq, state_dim))
-        self.action_arr = np.zeros((buffer_size, freq, action_dim))
+        self.state_arr = torch.zeros((buffer_size, freq, state_dim))
+        self.action_arr = torch.zeros((buffer_size, freq, action_dim))
 
     def append(self, state, goal, action, n_state, reward, done, state_arr, action_arr):
         self.state[self.ptr] = state
@@ -147,8 +147,8 @@ class Hierarchy4_buffer(ReplayBuffer):
     def __init__(self, state_dim, goal_dim, subgoal_dim, action_dim, buffer_size, batch_size, freq):
         super(Hierarchy4_buffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
         self.action = torch.zeros((buffer_size, subgoal_dim))
-        self.state_arr = np.zeros((buffer_size, freq, state_dim))
-        self.action_arr = np.zeros((buffer_size, freq, action_dim))
+        self.state_arr = torch.zeros((buffer_size, freq, state_dim))
+        self.action_arr = torch.zeros((buffer_size, freq, action_dim))
 
     def append(self, state, goal, action, n_state, reward, done, state_arr, action_arr):
         self.state[self.ptr] = state
@@ -184,8 +184,8 @@ class Hierarchy3_buffer(ReplayBuffer):
     def __init__(self, state_dim, goal_dim, subgoal_dim, action_dim, buffer_size, batch_size, freq):
         super(Hierarchy3_buffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
         self.action = torch.zeros((buffer_size, subgoal_dim))
-        self.state_arr = np.zeros((buffer_size, freq, state_dim))
-        self.action_arr = np.zeros((buffer_size, freq, action_dim))
+        self.state_arr = torch.zeros((buffer_size, freq, state_dim))
+        self.action_arr = torch.zeros((buffer_size, freq, action_dim))
 
     def append(self, state, goal, action, n_state, reward, done, state_arr, action_arr):
         self.state[self.ptr] = state
@@ -221,8 +221,8 @@ class Hierarchy2_buffer(ReplayBuffer):
     def __init__(self, state_dim, goal_dim, subgoal_dim, action_dim, buffer_size, batch_size, freq):
         super(Hierarchy2_buffer, self).__init__(state_dim, goal_dim, action_dim, buffer_size, batch_size)
         self.action = torch.zeros((buffer_size, subgoal_dim))
-        self.state_arr = np.zeros((buffer_size, freq, state_dim))
-        self.action_arr = np.zeros((buffer_size, freq, action_dim))
+        self.state_arr = torch.zeros((buffer_size, freq, state_dim))
+        self.action_arr = torch.zeros((buffer_size, freq, action_dim))
 
     def append(self, state, goal, action, n_state, reward, done, state_arr, action_arr):
         self.state[self.ptr] = state

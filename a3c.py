@@ -7,7 +7,7 @@ from preprocess import Preprocessor
 from dilated_lstm import DilatedLSTM
 
 
-class FeudalNetwork(nn.Module):
+class a3c(nn.Module):
     def __init__(self,
                  num_workers,
                  input_dim,

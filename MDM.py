@@ -33,7 +33,7 @@ class MDM(nn.Module):
         self.hierarchies_selected = torch.ones_like(torch.empty(self.num_workers, 3))
 
         self.preprocessor = Preprocessor(input_dim, device, mlp=False)
-        self.percept = Perception(self.hidden_dim[-1],  self.time_horizon[0])
+        self.percept = Perception(self.hidden_dim[-1],  self.time_horizon[0], self.num_workers)
         self.policy_network = Policy_Network(self.hidden_dim[-1],  300, num_workers)
         self.Hierarchy5_forth = Hierarchy5_forth(self.time_horizon[4], self.hidden_dim[4], args, device)
         self.Hierarchy4_forth = Hierarchy4_forth(self.time_horizon[3], self.hidden_dim[3], args, device)
@@ -190,7 +190,7 @@ class MDM(nn.Module):
         return goals_5, states_total, goals_4, goals_3, goals_2, masks
 
 class Perception(nn.Module):
-    def __init__(self, d, time_horizon):
+    def __init__(self, d, time_horizon, num_workers):
         super().__init__()
         self.percept = nn.Sequential(
             nn.Conv2d(3, 16, kernel_size=8, stride=4),
@@ -198,7 +198,7 @@ class Perception(nn.Module):
             nn.Conv2d(16, 32, kernel_size=4, stride=2),
             nn.ReLU(),
             nn.modules.Flatten(),
-            nn.Linear(32 * 9 * 9, d),
+            nn.Linear(num_workers * 9 * 9, d),
             nn.ReLU())
 
     def forward(self, x, hidden, mask):

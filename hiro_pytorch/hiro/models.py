@@ -21,6 +21,9 @@ from hiro.utils import _is_update
 import random
 import gym
 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class DilatedLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, radius=10):
         super().__init__()
@@ -32,7 +35,7 @@ class DilatedLSTM(nn.Module):
 
     def forward(self, state, hidden):
         """At each time step only the corresponding part of the state is updated
-        and the output is pooled across the previous c out- puts."""
+        and the output is pooled across the previous c outputs."""
         d_idx = self.dilation_idx
         hx, cx = hidden
         state = state.type(torch.float32)
@@ -50,7 +53,7 @@ class DilatedLSTM(nn.Module):
         """Because we do not want to have gradients flowing through all
         parameters but only at the dilation index, this function creates a
         'negated' version of dilated_index, everything EXCEPT these indices."""
-        masked_idx = torch.arange(1, self.radius * self.hidden_size + 1)
+        masked_idx = torch.arange(1, self.radius * self.hidden_size + 1).to(device)
         masked_idx[dilated_idx] = 0
         masked_idx = masked_idx.nonzero()
         masked_idx = masked_idx - 1
@@ -63,8 +66,6 @@ class DilatedLSTM(nn.Module):
         self.dilation = (self.dilation + 1) % self.radius
         return dilation_idx
 
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class TD3Actor(nn.Module):
     def __init__(self, state_dim, goal_dim, action_dim, scale=None):
@@ -80,9 +81,9 @@ class TD3Actor(nn.Module):
         self.l3 = nn.Linear(300, action_dim).to(device)
 
     def forward(self, state, goal):
-        a = F.relu(self.l1(torch.cat([state, goal], 1).type(torch.float32)))
-        a = F.relu(self.l2(a))
-        return self.scale * torch.tanh(self.l3(a))
+        a = F.relu(self.l1(torch.cat([state.to(device), goal.to(device)], 1).type(torch.float32))).to(device)
+        a = F.relu(self.l2(a)).to(device)
+        return self.scale * torch.tanh(self.l3(a)).to(device)
 
 class TD3Critic(nn.Module):
     def __init__(self, state_dim, goal_dim, action_dim):
@@ -97,9 +98,9 @@ class TD3Critic(nn.Module):
         self.l6 = nn.Linear(300, 1).to(device)
 
     def forward(self, state, goal, action):
-        sa = torch.cat([state, goal, action], 1).type(torch.float32)
+        sa = torch.cat([state.to(device), goal.to(device), action.to(device)], 1).type(torch.float32)
 
-        q = F.relu(self.l1(sa))
+        q = F.relu(self.l1(sa.to(device))).to(device)
         q = F.relu(self.l2(q))
         q = self.l3(q)
 
@@ -169,15 +170,15 @@ class TD3Controller(object):
 
         # save file (e.g. model/2000/high_actor.h)
         torch.save(
-            self.actor.state_dict(), 
+            self.actor.state_dict(),
             os.path.join(model_path, self.name+"_actor.h5")
         )
         torch.save(
-            self.critic1.state_dict(), 
+            self.critic1.state_dict(),
             os.path.join(model_path, self.name+"_critic1.h5")
         )
         torch.save(
-            self.critic2.state_dict(), 
+            self.critic2.state_dict(),
             os.path.join(model_path, self.name+"_critic2.h5")
         )
 
@@ -187,7 +188,7 @@ class TD3Controller(object):
             episode_list = map(int, os.listdir(self.model_path))
             episode = max(episode_list)
 
-        model_path = os.path.join(self.model_path, str(episode)) 
+        model_path = os.path.join(self.model_path, str(episode))
 
         self.actor.load_state_dict(torch.load(
             os.path.join(model_path, self.name+"_actor.h5"))
@@ -218,11 +219,11 @@ class TD3Controller(object):
         current_Q1 = self.critic1(states, goals, actions)
         current_Q2 = self.critic2(states, goals, actions)
 
-        critic1_loss = F.smooth_l1_loss(current_Q1, target_Q_detached)
-        critic2_loss = F.smooth_l1_loss(current_Q2, target_Q_detached)
+        critic1_loss = F.smooth_l1_loss(current_Q1, target_Q_detached).to(device)
+        critic2_loss = F.smooth_l1_loss(current_Q2, target_Q_detached).to(device)
         critic_loss = critic1_loss + critic2_loss
 
-        td_error = (target_Q_detached - current_Q1).mean().cpu().data.numpy()
+        td_error = (target_Q_detached - current_Q1).mean()
 
         self.critic1_optimizer.zero_grad()
         self.critic2_optimizer.zero_grad()
@@ -254,20 +255,20 @@ class TD3Controller(object):
         return self._train(states, goals, actions, rewards, n_states, goals, not_done)
 
     def policy(self, state, goal, to_numpy=True):
-        #state = get_tensor(state)
-        #goal = get_tensor(goal)
+        state = get_tensor(state)
+        goal = get_tensor(goal)
         action = self.actor(state, goal)
 
         #if to_numpy:
         #    return action.cpu().data.numpy().squeeze()
 
-        return action.squeeze()
+        return action
 
     def back(self, goal_now, goal_prev, hierarchy_drop, drop =True):
         if drop:
-            result = (self.linear(torch.tensor(goal_prev, dtype=torch.float32)).to(device) * hierarchy_drop.to(device)) + goal_now.to(device)
+            result = (self.linear(goal_prev.clone().detach().requires_grad_(True).type(torch.float32)).to(device) * hierarchy_drop.to(device)) + goal_now.to(device)
         else:
-            result = (self.linear(torch.tensor(goal_prev, dtype=torch.float32)).to(device)) + goal_now.to(device)
+            result = (self.linear(goal_prev.clone().detach().requires_grad_(True).type(torch.float32)).to(device)) + goal_now.to(device)
         return result
 
     def policy_with_noise(self, state, goal, to_numpy=True):
@@ -279,8 +280,8 @@ class TD3Controller(object):
         action = torch.min(action,  self.actor.scale)
         action = torch.max(action, -self.actor.scale)
 
-        if to_numpy:
-            return action.cpu().data.numpy().squeeze()
+        #if to_numpy:
+        #    return action.cpu().data.numpy().squeeze()
 
         return action.squeeze()
 
@@ -313,7 +314,7 @@ class Hierarchy5(TD3Controller):
             actor_lr, critic_lr, expl_noise, policy_noise,
             noise_clip, gamma, policy_freq, tau
         )
-        self.name = 'high'
+        self.name = 'high5'
         self.action_dim = action_dim
 
     def off_policy_corrections(self, low_con, batch_size, sgoals, states, actions, candidate_goals=8):
@@ -328,7 +329,7 @@ class Hierarchy5(TD3Controller):
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        original_goal = sgoals.clone().detach().requires_grad_(True)[:, np.newaxis, :]
         #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
         #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
         scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
@@ -340,7 +341,7 @@ class Hierarchy5(TD3Controller):
         # Shape: (batch_size, 10, subgoal_dim)
         candidates = torch.concatenate([original_goal, diff_goal, random_goals], axis=1)
         #states = np.array(states)[:, :-1, :]
-        actions = torch.tensor(actions)
+        actions = actions.clone().detach().requires_grad_(True)
         seq_len = len(states[0])
 
         # For ease
@@ -357,7 +358,7 @@ class Hierarchy5(TD3Controller):
         # batched_candidates = np.tile(candidates, [seq_len, 1, 1])
         # batched_candidates = batched_candidates.transpose(1, 0, 2)
 
-        policy_actions = torch.zeros((ncands, new_batch_sz) + action_dim)
+        policy_actions = torch.zeros((ncands, new_batch_sz) + action_dim).to(device)
 
         for c in range(ncands):
             subgoal = candidates[:,c]
@@ -411,7 +412,7 @@ class Hierarchy4(TD3Controller):
             actor_lr, critic_lr, expl_noise, policy_noise,
             noise_clip, gamma, policy_freq, tau
         )
-        self.name = 'high'
+        self.name = 'high4'
         self.action_dim = action_dim
 
     def off_policy_corrections(self, low_con, batch_size, sgoals, states, actions, candidate_goals=8):
@@ -426,7 +427,7 @@ class Hierarchy4(TD3Controller):
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        original_goal = sgoals.clone().detach().requires_grad_(True)[:, np.newaxis, :]
         #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
         #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
         scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
@@ -438,7 +439,7 @@ class Hierarchy4(TD3Controller):
         # Shape: (batch_size, 10, subgoal_dim)
         candidates = torch.concatenate([original_goal, diff_goal, random_goals], axis=1)
         #states = np.array(states)[:, :-1, :]
-        actions = torch.tensor(actions)
+        actions = actions.clone().detach().requires_grad_(True)
         seq_len = len(states[0])
 
         # For ease
@@ -509,7 +510,7 @@ class Hierarchy3(TD3Controller):
             actor_lr, critic_lr, expl_noise, policy_noise,
             noise_clip, gamma, policy_freq, tau
         )
-        self.name = 'high'
+        self.name = 'high3'
         self.action_dim = action_dim
 
     def off_policy_corrections(self, low_con, batch_size, sgoals, states, actions, candidate_goals=8):
@@ -524,7 +525,7 @@ class Hierarchy3(TD3Controller):
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        original_goal = sgoals.clone().detach().requires_grad_(True)[:, np.newaxis, :]
         #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
         #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
         scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
@@ -536,7 +537,7 @@ class Hierarchy3(TD3Controller):
         # Shape: (batch_size, 10, subgoal_dim)
         candidates = torch.concatenate([original_goal, diff_goal, random_goals], axis=1)
         #states = np.array(states)[:, :-1, :]
-        actions = torch.tensor(actions)
+        actions = actions.clone().detach().requires_grad_(True)
         seq_len = len(states[0])
 
         # For ease
@@ -586,7 +587,6 @@ class Hierarchy3(TD3Controller):
         #actions = get_tensor(actions)
         return self._train(states, goals, actions, rewards, n_states, goals, not_done, "3_")
 
-
 class Hierarchy2(TD3Controller):
     def __init__(
         self,
@@ -608,7 +608,7 @@ class Hierarchy2(TD3Controller):
             actor_lr, critic_lr, expl_noise, policy_noise,
             noise_clip, gamma, policy_freq, tau
         )
-        self.name = 'high'
+        self.name = 'high2'
         self.action_dim = action_dim
 
     def off_policy_corrections(self, low_con, batch_size, sgoals, states, actions, candidate_goals=8):
@@ -623,7 +623,7 @@ class Hierarchy2(TD3Controller):
         # Shape: (batch_size, 1, subgoal_dim)
         # original = 1
         # random = candidate_goals
-        original_goal = torch.tensor(sgoals)[:, np.newaxis, :]
+        original_goal = torch.tensor(sgoals[:, np.newaxis, :])
         #random_goals = np.random.normal(loc=diff_goal, scale=.5*self.scale[None, None, :],
         #                                size=(batch_size, candidate_goals, original_goal.shape[-1]))
         scale_tensor = 0.5 * torch.tensor(self.scale[None, None, :]).to(device)
@@ -722,7 +722,7 @@ class Policy_Network(nn.Module):
         self.Mrnn = DilatedLSTM(76, 3, time_horizon)   # 76을 다른 변수들의 연산으로 만들어 놓기(지금은 그냥 디버깅해 값을 확인 후 채운 것)
         self.num_workers = num_workers
     def forward(self, z, goal_5_norm, goal_4_norm, goal_3_norm, hierarchies_selected, time_horizon, hidden, mask, step):
-        goal_x_info = torch.cat([goal_5_norm.detach(),goal_4_norm.detach(),goal_3_norm.detach(), z.detach()])
+        goal_x_info = torch.cat([goal_5_norm.squeeze(0).detach(),goal_4_norm.squeeze(0).detach(),goal_3_norm.squeeze(0).detach(), z.to(device).detach()])
         hidden = (mask * hidden[0], mask * hidden[1])
         hidden = (hidden[0].squeeze(), hidden[1].squeeze())
 
@@ -762,12 +762,12 @@ class Agent():
 
     def end_episode(self, episode, logger=None):
         raise NotImplementedError
-    
+
     def evaluate_policy(self, env, eval_episodes=10, render=False, save_video=False, sleep=-1):
         if save_video:
             from OpenGL import GL
-            env = gym.wrappers.Monitor(env, directory='video',
-                                    write_upon_reset=True, force=True, resume=True, mode='evaluation')
+            #env = gym.wrappers.Monitor(env, directory='video',
+            #                        write_upon_reset=True, force=True, resume=True, mode='evaluation')
             render = False
 
         success = 0
@@ -775,12 +775,12 @@ class Agent():
         env.evaluate = True
         for e in range(eval_episodes):
             obs = env.reset()
-            fg = obs['desired_goal']
-            s = obs['observation']
+            fg = torch.tensor(obs['desired_goal']).to(device)
+            s = torch.tensor(obs['observation']).to(device)
             done = False
             reward_episode_sum = 0
             step = 0
-            
+
             self.set_final_goal(fg)
 
             while not done:
@@ -791,7 +791,7 @@ class Agent():
 
                 a, r, n_s, done = self.step(s, env, step)
                 reward_episode_sum += r
-                
+
                 s = n_s
                 step += 1
                 self.end_step()
@@ -844,7 +844,7 @@ class TD3Agent(Agent):
                 a = self._choose_action_with_noise(s)
         else:
             a = self._choose_action(s)
-        
+
         obs, r, done, _ = env.step(a)
         n_s = obs['observation']
 
@@ -945,15 +945,6 @@ class HiroAgent(Agent):
             policy_freq=policy_freq_high
             )
 
-        self.Hierarchy3 = Hierarchy3(
-            state_dim=state_dim,
-            goal_dim=goal_dim,
-            action_dim=subgoal_dim,
-            scale=scale_high,
-            model_path=model_path,
-            policy_freq=policy_freq_high
-            )
-
         self.Hierarchy2 = Hierarchy2(
             state_dim=state_dim,
             goal_dim=goal_dim,
@@ -978,16 +969,6 @@ class HiroAgent(Agent):
             action_dim=action_dim,
             buffer_size=buffer_size,
             batch_size=batch_size
-            )
-
-        self.replay_buffer_high = HighReplayBuffer(
-            state_dim=state_dim,
-            goal_dim=goal_dim,
-            subgoal_dim=subgoal_dim,
-            action_dim=action_dim,
-            buffer_size=buffer_size,
-            batch_size=batch_size,
-            freq=buffer_freq
             )
 
         self.Hierarchy5_buffer = Hierarchy5_buffer(
@@ -1082,43 +1063,34 @@ class HiroAgent(Agent):
             a = self._choose_action(s, self.sg)
 
         # Take action
+        if torch.is_tensor(a):
+            a = a.cpu().data.numpy().squeeze()
         obs, r, done, _ = env.step(a)
+        obs['observation'] = torch.tensor(obs['observation']).to(device)
+        obs['achieved_goal'] = torch.tensor(obs['achieved_goal']).to(device)
+        obs['desired_goal'] = torch.tensor(obs['desired_goal']).to(device)
         n_s = obs['observation']
+        s = s.to(device)
 
 
 
-
-        if explore:   # start_training_steps를 잘 조절할 필요가 있어보임. 학습이 안될지도...
-            if global_step < self.start_training_steps:
-                n_sg5 = torch.Tensor(self.subgoal.action_space.sample())
-            else:
-                n_sg5 = self._choose_subgoal_with_noise_hierarchy5(step, s, self.sg5, n_s)
-        else:
-            n_sg5 = self._choose_subgoal_hierarchy5(step, s, self.sg5, n_s)
-            
-        if explore:
-            if global_step < self.start_training_steps:
-                n_sg4 = torch.Tensor(self.subgoal.action_space.sample())
-            else:
-                n_sg4 = self._choose_subgoal_with_noise_hierarchy4(step, s, self.sg4, n_s)
-        else:
-            n_sg4 = self._choose_subgoal_hierarchy4(step, s, self.sg4, n_s)
 
         if explore:
             if global_step < self.start_training_steps:
-                n_sg3 = torch.Tensor(self.subgoal.action_space.sample())
+                n_sg5 = torch.Tensor(self.subgoal.action_space.sample()).to(device)
+                n_sg4 = torch.Tensor(self.subgoal.action_space.sample()).to(device)
+                n_sg3 = torch.Tensor(self.subgoal.action_space.sample()).to(device)
+                n_sg2 = torch.Tensor(self.subgoal.action_space.sample()).to(device)
             else:
-                n_sg3 = self._choose_subgoal_with_noise_hierarchy3(step, s, self.sg3, n_s)
+                n_sg5 = self._choose_subgoal_with_noise_hierarchy5(step, s, self.sg5.to(device), n_s)
+                n_sg4 = self._choose_subgoal_with_noise_hierarchy4(step, s, self.sg4.to(device), n_s)
+                n_sg3 = self._choose_subgoal_with_noise_hierarchy3(step, s, self.sg3.to(device), n_s)
+                n_sg2 = self._choose_subgoal_with_noise_hierarchy2(step, s, self.sg2.to(device), n_s)
         else:
-            n_sg3 = self._choose_subgoal_hierarchy3(step, s, self.sg3, n_s)
-
-        if explore:
-            if global_step < self.start_training_steps:
-                n_sg2 = torch.Tensor(self.subgoal.action_space.sample())
-            else:
-                n_sg2 = self._choose_subgoal_with_noise2(step, s, self.sg2, n_s)
-        else:
-            n_sg2 = self._choose_subgoal_hierarchy2(step, s, self.sg2, n_s)
+            n_sg5 = self._choose_subgoal_hierarchy5(step, s, self.sg5.to(device), n_s)
+            n_sg4 = self._choose_subgoal_hierarchy4(step, s, self.sg4.to(device), n_s)
+            n_sg3 = self._choose_subgoal_hierarchy3(step, s, self.sg3.to(device), n_s)
+            n_sg2 = self._choose_subgoal_hierarchy2(step, s, self.sg2.to(device), n_s)
 
         if ((step % 300) == 0):
             self.hierarchy_drop, hidden_policy_network = self.policy_network(torch.Tensor(obs['observation']), n_sg5, n_sg4, n_sg3, self.hierarchies_selected, self.time_horizon,
@@ -1129,9 +1101,9 @@ class HiroAgent(Agent):
                 self.hierarchy_drop[:, 2] = random.randrange(0,2)
 
         #self.hierarchy_drop = self.policy_network(obs['observation'], n_sg5, n_sg4, n_sg3, self.hierarchies_selected, self.time_horizon, self.hidden_policy_network, self.masks[-1], step)
-        n_sg5_n, n_sg4_n, n_sg3_n, n_sg2_n = self.Goal_Normalizer(torch.tensor(n_sg5), n_sg4, n_sg3, n_sg2)
-        zero_vec = np.zeros_like(n_sg5_n)
-        zero_vec = torch.tensor(zero_vec, dtype=torch.float32).to(device)
+        n_sg5_n, n_sg4_n, n_sg3_n, n_sg2_n = self.Goal_Normalizer(n_sg5, n_sg4, n_sg3, n_sg2)
+        zero_vec = torch.zeros_like(n_sg5_n, dtype=torch.float32).to(device)
+        #zero_vec = torch.tensor(zero_vec, dtype=torch.float32).to(device)
         goal = self.back_hierarchy5(step, n_sg5_n, zero_vec, self.hierarchy_drop[0,0])
         goal = self.back_hierarchy4(step, n_sg4_n, goal, self.hierarchy_drop[0,1])
         goal = self.back_hierarchy3(step, n_sg3_n, goal, self.hierarchy_drop[0,2])
@@ -1154,8 +1126,8 @@ class HiroAgent(Agent):
                     n_state=buff[4],
                     reward=buff[3],
                     done=buff[5],
-                    state_arr=np.array(buff[6]),
-                    action_arr=np.array(buff[7])
+                    state_arr=buff[6][0],
+                    action_arr=buff[7][0]
                 )
             buff = [s, self.fg, self.sg, 0, None, None, [], []]
 
@@ -1186,22 +1158,27 @@ class HiroAgent(Agent):
             losses.update(loss)
             td_errors.update(td_error)
 
-        if global_step % self.time_horizon[4] == 0:
+        freq_correc = 100
+        #if global_step % self.time_horizon[4] == 0:
+        if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy5.train(self.Hierarchy5_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
 
-        if global_step % self.time_horizon[3] == 0:
+        #if global_step % self.time_horizon[3] == 0:
+        if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy4.train(self.Hierarchy4_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
 
-        if global_step % self.time_horizon[2] == 0:
+        #if global_step % self.time_horizon[2] == 0:
+        if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy3.train(self.Hierarchy3_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
 
-        if global_step % self.time_horizon[1] == 0:
+        #if global_step % self.time_horizon[1] == 0:
+        if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy2.train(self.Hierarchy2_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
@@ -1212,12 +1189,12 @@ class HiroAgent(Agent):
         return self.low_con.policy_with_noise(s, sg)
 
     def _choose_subgoal_with_noise_hierarchy5(self, step, s, sg, n_s):
-        if step % self.buffer_freq == 0: # Should be zero
+        if step % self.buffer_freq == 0:
             sg = self.Hierarchy5.policy_with_noise(s, self.fg)
         else:
             sg = self.subgoal_transition(s, sg, n_s)
 
-        sg = torch.tensor(sg)
+        sg = sg.clone().detach().requires_grad_(True)
         return sg
 
     def _choose_subgoal_with_noise_hierarchy4(self, step, s, sg, n_s):
@@ -1226,7 +1203,7 @@ class HiroAgent(Agent):
         else:
             sg = self.subgoal_transition(s, sg, n_s)
 
-        sg = torch.tensor(sg)
+        sg = sg.clone().detach().requires_grad_(True)
         return sg
 
     def _choose_subgoal_with_noise_hierarchy3(self, step, s, sg, n_s):
@@ -1235,16 +1212,16 @@ class HiroAgent(Agent):
         else:
             sg = self.subgoal_transition(s, sg, n_s)
 
-        sg = torch.tensor(sg)
+        sg = sg.clone().detach().requires_grad_(True)
         return sg
 
-    def _choose_subgoal_with_noise2(self, step, s, sg, n_s):
+    def _choose_subgoal_with_noise_hierarchy2(self, step, s, sg, n_s):
         if step % self.buffer_freq == 0: # Should be zero
             sg = self.Hierarchy2.policy_with_noise(s, self.fg)
         else:
             sg = self.subgoal_transition(s, sg, n_s)
 
-        sg = torch.tensor(sg)
+        sg = sg.clone().detach().requires_grad_(True)
         return sg
 
 
@@ -1308,7 +1285,7 @@ class HiroAgent(Agent):
         self.sg = self.n_sg
 
     def end_episode(self, episode, logger=None):
-        if logger: 
+        if logger:
             # log
             logger.write('reward/Intrinsic Reward', self.episode_subreward, episode)
 

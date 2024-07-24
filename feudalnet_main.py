@@ -18,7 +18,7 @@ parser.add_argument('--num-workers', type=int, default=8,
                     help='number of parallel environments to run')
 parser.add_argument('--num-steps', type=int, default=400,
                     help='number of steps the agent takes before updating')
-parser.add_argument('--max-steps', type=int, default=int(1e8),
+parser.add_argument('--max-steps', type=int, default=int(1e5),
                     help='maximum number of training steps in total')
 parser.add_argument('--cuda', type=bool, default=True,
                     help='Add cuda')
@@ -176,25 +176,27 @@ def experiment(args):
         'args': args,
         'processor_mean': feudalnet.preprocessor.rms.mean,
         'optim': optimizer.state_dict()},
-        f'models/{args.env_name}_{args.run_name}_steps={step}.pt')
+        f'models_new_testing_fun/{args.env_name}_{args.run_name}_steps={step}.pt')
 
 
 def main(args):
+    import gym
+    all_envs = gym.envs.registry.all()
+    noframeskip_v4_no_ram_envs = [env.id for env in all_envs if
+                                  ((env.id.endswith('NoFrameskip-v4')) and ('-ram' not in env.id) and ('Defender' not in env.id))]
+
     run_name = args.run_name
-    seed_size_ori = [args.hidden_dim_manager, args.hidden_dim_worker]
-    seed_size = [[128,64],[256,128],[512,256]]
-    seed = 0
-    for senum in range(0,5):
-        wandb.init(project="MDM",
-        config=args.__dict__
-        )
-        args.seed = senum
-        wandb.run.name = f"{run_name}_runseed={senum}"
+    #for seed in range(len(noframeskip_v4_no_ram_envs)):
+    for seed in range(len(noframeskip_v4_no_ram_envs)):
+        env_name_ = noframeskip_v4_no_ram_envs[seed]
+        wandb.init(project="just_testing",
+                   config=args.__dict__
+                   )
+        args.seed = seed
+        args.env_name = env_name_
+        wandb.run.name = f"{run_name}_{env_name_[:-14]}"
         experiment(args)
         wandb.finish()
-        seed+=1
-        args.lr *= 0.1
-
 
 
 if __name__ == '__main__':
