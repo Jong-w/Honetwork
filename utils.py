@@ -55,7 +55,7 @@ def atari_wrapper(env):
 
 def make_envs(env_name, num_envs, seed=0):
     env_ = gym.make(env_name)
-    is_atari = hasattr(gym.envs, 'atari') and isinstance(env_.unwrapped, gym.envs.atari.atari_env.AtariEnv)
+    is_atari = hasattr(gym.envs, 'atari') and isinstance(env_.unwrapped, gym.envs.atari.AtariEnv)
     if is_atari:
         wrapper_fn = atari_wrapper
     else:
