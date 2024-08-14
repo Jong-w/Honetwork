@@ -5,6 +5,7 @@ from torch.nn.functional import cosine_similarity as d_cos, normalize
 from utils import init_hidden, weight_init
 from preprocess import Preprocessor
 from dilated_lstm import DilatedLSTM
+from copy import deepcopy
 
 
 class FeudalNetwork(nn.Module):
@@ -95,6 +96,72 @@ class FeudalNetwork(nn.Module):
 
     def state_goal_cosine(self, states, goals, masks):
         return self.manager.state_goal_cosine(states, goals, masks)
+
+    def finding_goal_alike(self,x, states, goals, masks, env):
+        t = self.c
+
+        # generate a tons of states in self.c steps and collect them
+        class mlp_env(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc1 = nn.Linear(256, 256)
+                self.fc3 = nn.Linear(256, 256)
+            def forward(self, x):
+                x = torch.relu(self.fc1(x))
+                x = torch.relu(self.fc2(x))
+                x = self.fc3(x)
+                return x
+            
+        mlp_model = mlp_env().to(self.device)
+        mse_loss = nn.MSELoss()
+        optimizer = torch.optim.Adam(mlp_model.parameters(), lr=1e-3)
+        mlp_model.train()
+        x_0 = deepcopy(x)
+        env_0 = deepcopy(env)
+        goals_0 = deepcopy(goals)
+        states_0 = deepcopy(states)
+        states_goal_0 = []
+        for ep in range(1e3):
+            env_ep = deepcopy(env_0)
+            goals_ep = deepcopy(goals_0)
+            states_ep = deepcopy(states_0)
+            states_goal_ep = []
+
+            _x = self.preprocessor(x_0)
+
+            for _ in range(self.c*5):
+                _x = torch.tensor(_x, dtype=torch.float32).to(self.device)
+                z = self.percept(_x)
+                goal, hidden_m, state, value_m = self.manager(z, self.hidden_m, mask)
+
+                if len(goals_ep) > (2 * self.c + 1):
+                    goals_ep.pop(0)
+                    states_ep.pop(0)
+                goals_ep.append(goal)
+                states_ep.append(state.detach())
+                states_goal_ep.append([goals_ep[:self.c + 1] + states_ep[:self.c + 1], states_ep[self.c+1:2*self.c+1]])
+
+                action_dist, hidden_w, value_w = self.worker(z, goals_ep[:self.c + 1], self.hidden_w, mask)
+                action = torch.argmax(action_dist)
+                x_true, _, done, _ = env_ep.step(action)
+
+                _x = self.preprocessor(x_true)
+
+                if done:
+                    break
+            loss = mse_loss(_x, states[t]+goals[t])
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            print(f'ep: {ep}, loss: {loss.item()}')
+
+        # calculate the mse loss between the generated states and the goal
+
+
+        mask = torch.stack(masks[t: t + self.c - 1]).prod(dim=0)
+        cosine_dist = d_cos(states[t + self.c] - states[t], goals[t])
+        cosine_dist = mask * cosine_dist.unsqueeze(-1)
+        return cosine_dist
 
     def repackage_hidden(self):
         def repackage_rnn(x):
@@ -188,7 +255,6 @@ class Manager(nn.Module):
         cosine_dist = d_cos(states[t + self.c] - states[t], goals[t])
         cosine_dist = mask * cosine_dist.unsqueeze(-1)
         return cosine_dist
-
 
 class Worker(nn.Module):
     def __init__(self, b, c, d, k, num_actions, device):

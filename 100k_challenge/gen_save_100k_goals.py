@@ -4,7 +4,7 @@ from MDM_no_hd import MDM_no_hd
 from MDM import MDM
 from a3c import a3c
 from feudalnet import FeudalNetwork
-from utils import make_envs, take_action, init_obj
+from utils import make_envs, take_action, init_obj, basic_wrapper, atari_wrapper
 from storage import Storage
 import wandb
 import os
@@ -76,6 +76,14 @@ def experiment(args):
         torch.backends.cudnn.benchmark = False
 
     envs = make_envs(args.env_name, args.num_workers)
+    
+    env_flat = gym.make(args.env_name)
+    is_atari = hasattr(gym.envs, 'atari') and isinstance(env_flat.unwrapped, gym.envs.atari.AtariEnv)
+    if is_atari:
+        wrapper_fn = atari_wrapper
+    else:
+        wrapper_fn = basic_wrapper
+        
 
     if args.model_name == 'FuN':
         model = FeudalNetwork(
@@ -104,10 +112,10 @@ def experiment(args):
 
     if args.model_name == 'FuN':
         path = '100k_challenge/models_new_testing_fun/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
-        path = 'models_new_testing_fun/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        # path = 'models_new_testing_fun/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     if args.model_name == 'a3c':
         path = '100k_challenge/models/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
-        path = 'models/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        # path = 'models/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     model.load_state_dict(torch.load(path)['model'])
     model.eval()
 
@@ -117,6 +125,7 @@ def experiment(args):
     goals, states, masks = model.init_obj()
 
     x = envs.reset()
+    _x = env_flat.reset()
     step = 0
     step_t_ep = 0
     break_flag = False
@@ -137,6 +146,7 @@ def experiment(args):
             # Take a step, log the info, get the next state
             action, logp, entropy = take_action(action_dist)
             x, reward, done, info = envs.step(action)
+            _x, _reward, _done, _info = env_flat.step(action)
 
             #            infos =[ ]
             #           for i in range(len(done)):
@@ -154,6 +164,8 @@ def experiment(args):
             mask = torch.FloatTensor(1 - done).unsqueeze(-1).to(args.device)
             masks.pop(0)
             masks.append(mask)
+
+            model.finding_goal_alike(x, states, goals, masks, env_flat)
 
             storage.add({
                 'r': torch.FloatTensor(reward).unsqueeze(-1).to(device),
@@ -174,10 +186,10 @@ def experiment(args):
             #                     },step=step)
             for _i in range(len(done)):
                 if done[_i]:
-                    wandb.log(
-                        {"training/episode/reward": info[_i]['returns/episodic_reward'],
-                         "training/episode/length": info[_i]['returns/episodic_length']
-                         }, step=step)
+                    # wandb.log(
+                    #     {"training/episode/reward": info[_i]['returns/episodic_reward'],
+                    #      "training/episode/length": info[_i]['returns/episodic_length']
+                    #      }, step=step)
                     break_flag = True
             step += args.num_workers
 
@@ -208,7 +220,7 @@ def main(args):
     existing_names = [run.name for run in runs]
 
     #for seed in range(len(noframeskip_v4_no_ram_envs)):
-    for i in ['a3c', 'FuN']:
+    for i in ['FuN']:
         for seed in range(len(noframeskip_v4_no_ram_envs)):
             for iters in range(len(seeds_)):
                 env_name_ = noframeskip_v4_no_ram_envs[seed]
@@ -218,23 +230,29 @@ def main(args):
                 run_name = f"{env_name_[:-14]}_{args.model_name}_iter{iters}"
                 # load wandb runs from the project using wandb API
 
+                args.seed = seeds_[iters]
+                args.env_name = env_name_
+                # wandb.run.name = f"{env_name_[:-14]}_{args.model_name}_iter{iters}"
 
-                if run_name in existing_names:
-                    print("Project with the same name already exists.")
-                    # Handle the case where the project name already exists
-                else:
-                    # Continue with the rest of the code
-                    # proceed to the next step
+                experiment(args)
+                # wandb.finish()
 
-                    wandb.init(project="MDM_100k_collect_test",
-                            config=args.__dict__
-                            )
-                    args.seed = seeds_[iters]
-                    args.env_name = env_name_
-                    wandb.run.name = f"{env_name_[:-14]}_{args.model_name}_iter{iters}"
-
-                    experiment(args)
-                    wandb.finish()
+                # if run_name in existing_names:
+                #     print("Project with the same name already exists.")
+                #     # Handle the case where the project name already exists
+                # else:
+                #     # Continue with the rest of the code
+                #     # proceed to the next step
+                #
+                #     wandb.init(project="MDM_100k_collect_test",
+                #             config=args.__dict__
+                #             )
+                #     args.seed = seeds_[iters]
+                #     args.env_name = env_name_
+                #     wandb.run.name = f"{env_name_[:-14]}_{args.model_name}_iter{iters}"
+                #
+                #     experiment(args)
+                #     wandb.finish()
 
 
 if __name__ == '__main__':
