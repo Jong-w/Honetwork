@@ -108,7 +108,7 @@ def experiment(args):
         path = '100k_challenge/models_new_testing_/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     if args.model_name == 'MDM_80':
         path = 'models_new_testing/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
-        path = '100k_challenge/models_new_testing/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        # path = '100k_challenge/models_new_testing/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     model.load_state_dict(torch.load(path)['model'])
     model.eval()
 
@@ -215,7 +215,7 @@ def main(args):
     runs = wandb.Api().runs("MDM_100k_collect_test")
     existing_names = [run.name for run in runs]
 
-    for i in ['MDM_no_hd_80', 'MDM_80']:
+    for i in [ 'MDM_80', 'MDM_no_hd_80']:
         for seed in range(len(noframeskip_v4_no_ram_envs)):
             for iters in range(len(seeds_)):
                 env_name_ = noframeskip_v4_no_ram_envs[seed]

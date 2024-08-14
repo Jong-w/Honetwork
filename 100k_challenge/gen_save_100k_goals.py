@@ -146,7 +146,7 @@ def experiment(args):
             # Take a step, log the info, get the next state
             action, logp, entropy = take_action(action_dist)
             x, reward, done, info = envs.step(action)
-            _x, _reward, _done, _info = env_flat.step(action)
+            _x, _reward, _done, _info = env_flat.step(action[0])
 
             #            infos =[ ]
             #           for i in range(len(done)):
