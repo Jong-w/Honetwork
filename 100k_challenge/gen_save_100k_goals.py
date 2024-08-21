@@ -1,5 +1,6 @@
 from logger import Logger
 import gym
+from gym.wrappers import AtariPreprocessing
 from MDM_no_hd import MDM_no_hd
 from MDM import MDM
 from a3c import a3c
@@ -13,6 +14,8 @@ import argparse
 import torch
 import gc
 import numpy as np
+from torch.nn.functional import mse_loss
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='MDM')
 
@@ -63,6 +66,52 @@ parser.add_argument('--seed', type=int, default=0,
 
 args = parser.parse_args()
 
+# simple rl model for knowledge transfer
+class rl_model(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim, n_actions, device, mlp=False):
+        super(rl_model, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.device = device
+        self.mlp = torch.nn.Sequential(
+            torch.nn.Linear(input_dim, hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, n_actions)
+        ).to(device)
+        self.softmax = torch.nn.Softmax(dim=1)
+
+    def forward(self, x):
+        x = self.mlp(x)
+        x = self.softmax(x)
+        return x
+
+
+class mlp_env(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        # fc layers and deconv layers to revert back image that shape is 3, 84, 84
+        # fc layers
+        self.fc1 = torch.nn.Linear(256, 256)
+        self.fc2 = torch.nn.Linear(256, 512 * 7 * 7)
+        # deconv layers from hidden activation that has shape of batch, 256 to batch, 3, 84, 84
+        self.deconv_layers = torch.nn.Sequential(
+            torch.nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),  # 7x7 -> 14x14
+            torch.nn.ReLU(),
+            torch.nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # 14x14 -> 28x28
+            torch.nn.ReLU(),
+            torch.nn.ConvTranspose2d(128, 3, kernel_size=5, stride=3, padding=1),    # 28x28 -> 84x84
+            torch.nn.Sigmoid()        )
+
+    def forward(self, x ):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = x.view(-1, 512, 7, 7)
+        x = self.deconv_layers(x)
+
+        return x 
+    
+
 def experiment(args):
 
     # logger = Logger(args.run_name, args)
@@ -78,6 +127,7 @@ def experiment(args):
     envs = make_envs(args.env_name, args.num_workers)
     
     env_flat = gym.make(args.env_name)
+    # env_flat = AtariPreprocessing(env_flat, grayscale_obs=False, scale_obs=True)
     is_atari = hasattr(gym.envs, 'atari') and isinstance(env_flat.unwrapped, gym.envs.atari.AtariEnv)
     if is_atari:
         wrapper_fn = atari_wrapper
@@ -119,11 +169,20 @@ def experiment(args):
     model.load_state_dict(torch.load(path)['model'])
     model.eval()
 
+    # load rnn rl model
+    rl = rl_model(input_dim=256, hidden_dim=256, n_actions=envs.single_action_space.n, device=device, mlp=args.mlp).to(device)
+    rl.train()
+    mlp_deconv = mlp_env().to(device)
+    mlp_deconv.train()
+
+    optimizer = torch.optim.Adam(rl.parameters(), lr=1e-3)
+    optimizer_deconv = torch.optim.Adam(mlp_deconv.parameters(), lr=1e-3)
+
     # In orther to avoid gradient exploding, we apply gradient clipping.
     #optimizer = torch.optim.RMSprop(model.parameters(), lr=args.lr, alpha=0.99, eps=1e-5)
 
     goals, states, masks = model.init_obj()
-
+    
     x = envs.reset()
     _x = env_flat.reset()
     step = 0
@@ -139,6 +198,8 @@ def experiment(args):
                                 's_goal_cos', 'mask', 'ret_w', 'ret_m',
                                 'adv_m', 'adv_w'])
 
+        xs = [np.zeros_like(x)]*len(goals)
+        xs.append(x)
         for _ in range(args.num_steps):
             action_dist, goals, states, value_m, value_w \
                 = model(x, goals, states, masks[-1])
@@ -165,7 +226,95 @@ def experiment(args):
             masks.pop(0)
             masks.append(mask)
 
-            model.finding_goal_alike(x, states, goals, masks, env_flat)
+            xs.pop(0)
+            xs.append(x)
+
+            packed = model.finding_goal_alike(x, states, goals, masks, xs, env_flat)
+
+            if packed is not None:
+                state_goal, losses, x_trues = packed
+                print(f"losses: {np.array(losses).min()}")
+                #where isthe argmin(losses)
+                for iii in range(len(state_goal)):
+                    # train the model for generating goals
+                    _state_goal = state_goal[iii]
+                    _x_true = x_trues[iii]
+
+                    _x_true_valid = _x_true[model.c:] # current states
+                    _x_true_in = _x_true[:-model.c] # states from model.c step before
+
+                    # MAKE evertthing to torch.tensor
+                    _x_true_valid = [torch.tensor(xt).to(device) for xt in _x_true_valid]
+                    _x_true_in = [torch.tensor(xt).to(device) for xt in _x_true_in]
+
+                    _x_true_valid = torch.stack(_x_true_valid).squeeze().to(device)
+                    _x_true_in = torch.stack(_x_true_in).squeeze().to(device)
+
+                    _state_goal_valid = _state_goal[:-model.c] # goals from model.c step before
+                    _goals_valid = [sg[0] for sg in _state_goal_valid] 
+                    _goals_valid = torch.stack(_goals_valid).squeeze().to(device)
+
+                    for inepoch in range(100):
+
+                        # _x_pred = mlp_deconv(_goals_valid.detach(), _x_true_in.detach())
+                        _x_pred = mlp_deconv(_goals_valid.detach())
+                        
+                        # loss
+                        loss = mse_loss(_x_pred, _x_true_valid.detach())
+
+                        optimizer_deconv.zero_grad()
+                        with torch.autograd.set_detect_anomaly(True):
+                            loss.backward()
+                        optimizer_deconv.step()
+
+                        print(f"loss: {loss}")
+
+            # save model 
+            mlp_deconv.save('mlp_deconv.pt')
+            # make figures comparing x_true and x_pred
+            for iii in range(len(state_goal)):
+                _state_goal = state_goal[iii]
+                _x_true = x_trues[iii]
+
+                _x_true_valid = _x_true[model.c:]
+                _x_true_in = _x_true[:-model.c]
+
+                _x_true_valid = [torch.tensor(xt).to(device) for xt in _x_true_valid]
+                _x_true_in = [torch.tensor(xt).to(device) for xt in _x_true_in]
+
+                _x_true_valid = torch.stack(_x_true_valid).squeeze().to(device)
+                _x_true_in = torch.stack(_x_true_in).squeeze().to(device)
+
+                _state_goal_valid = _state_goal[:-model.c]
+                _goals_valid = [sg[0] for sg in _state_goal_valid]
+
+                _goals_valid = torch.stack(_goals_valid).squeeze().to(device)
+
+                _x_pred = mlp_deconv(_goals_valid.detach())
+
+                # save the figure
+                for i in range(_x_true_valid.shape[0]):
+                    x_true = _x_true_valid[i].cpu().detach().numpy()
+                    x_pred = _x_pred[i].cpu().detach().numpy()
+
+                    x_true = np.transpose(x_true, (1, 2, 0))
+                    x_pred = np.transpose(x_pred, (1, 2, 0))
+
+                    plt.imshow(x_true)
+                    plt.savefig(f'x_true_{i}.png')
+                    plt.imshow(x_pred)
+                    plt.savefig(f'x_pred_{i}.png')
+
+
+
+        
+
+
+            # for ii in range(len(goals)):
+            #     if ii-self.c < 0:
+            #         continue
+            #     if not torch.all(goals[ii]==0) and not torch.all(states[ii-self.c]==0):
+            #         print(ii)
 
             storage.add({
                 'r': torch.FloatTensor(reward).unsqueeze(-1).to(device),

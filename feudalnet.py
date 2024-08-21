@@ -1,6 +1,11 @@
 import torch
 from torch import nn
 from torch.nn.functional import cosine_similarity as d_cos, normalize
+from torch.nn.functional import mse_loss
+
+from gym.wrappers import AtariPreprocessing
+import cv2
+import numpy as np
 
 from utils import init_hidden, weight_init
 from preprocess import Preprocessor
@@ -97,72 +102,94 @@ class FeudalNetwork(nn.Module):
     def state_goal_cosine(self, states, goals, masks):
         return self.manager.state_goal_cosine(states, goals, masks)
 
-    def finding_goal_alike(self,x, states, goals, masks, env):
+    def finding_goal_alike(self, x, states, goals, masks, xs, env):
         t = self.c
+        losses = []
 
         # generate a tons of states in self.c steps and collect them
-        class mlp_env(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.fc1 = nn.Linear(256, 256)
-                self.fc3 = nn.Linear(256, 256)
-            def forward(self, x):
-                x = torch.relu(self.fc1(x))
-                x = torch.relu(self.fc2(x))
-                x = self.fc3(x)
-                return x
-            
-        mlp_model = mlp_env().to(self.device)
-        mse_loss = nn.MSELoss()
-        optimizer = torch.optim.Adam(mlp_model.parameters(), lr=1e-3)
-        mlp_model.train()
-        x_0 = deepcopy(x)
-        env_0 = deepcopy(env)
-        goals_0 = deepcopy(goals)
-        states_0 = deepcopy(states)
-        states_goal_0 = []
-        for ep in range(1e3):
-            env_ep = deepcopy(env_0)
-            goals_ep = deepcopy(goals_0)
-            states_ep = deepcopy(states_0)
-            states_goal_ep = []
 
-            _x = self.preprocessor(x_0)
+        for ii in range(len(goals)):
+            if ii-self.c < 0:
+                continue
+            if not torch.all(goals[ii]==0) and not torch.all(states[ii-self.c]==0):
+                print(ii)
+                # mse_loss = nn.MSELoss()
+                xs_0 = deepcopy(xs)
+                x_0 = deepcopy(x)
+                env_0 = deepcopy(env)
+                goals_0 = deepcopy([goal.detach() for goal in goals])
+                states_0 = deepcopy(states)
+                masks_0 = deepcopy(masks)
+                
+                states_goal_9 = []
+                losses_9 = []
+                x_9 = []
 
-            for _ in range(self.c*5):
-                _x = torch.tensor(_x, dtype=torch.float32).to(self.device)
-                z = self.percept(_x)
-                goal, hidden_m, state, value_m = self.manager(z, self.hidden_m, mask)
+                for ep in range(int(100)):
+                    xs_purely = []
+                    zs_purely = []
+                    xs_ep = deepcopy(xs_0)
+                    env_ep = deepcopy(env_0)
+                    goals_ep = deepcopy(goals_0)
+                    goals_purely = deepcopy(goals_0)
+                    states_ep = deepcopy(states_0)
+                    states_purely = deepcopy(states_0)
+                    masks_ep = deepcopy(masks_0)
+                    states_goal_ep = []
+                    loss_ep = []
+                    
+                    xs_purely.append(torch.tensor(x_0.transpose((0, 3, 1, 2))))
+                    _x = self.preprocessor(x_0)
 
-                if len(goals_ep) > (2 * self.c + 1):
-                    goals_ep.pop(0)
-                    states_ep.pop(0)
-                goals_ep.append(goal)
-                states_ep.append(state.detach())
-                states_goal_ep.append([goals_ep[:self.c + 1] + states_ep[:self.c + 1], states_ep[self.c+1:2*self.c+1]])
+                    for _ in range(self.c*5):
+                        _x = _x.clone()
+                        z = self.percept(_x)
+                        # zs_purely.append(z)
+                        goal, hidden_m, state, value_m = self.manager(z, self.hidden_m, masks_ep[-1])
 
-                action_dist, hidden_w, value_w = self.worker(z, goals_ep[:self.c + 1], self.hidden_w, mask)
-                action = torch.argmax(action_dist)
-                x_true, _, done, _ = env_ep.step(action)
+                        if len(goals_ep) > (2 * self.c + 1):
+                            goals_ep.pop(0)
+                            states_ep.pop(0)
+                        goals_ep.append(goal)
+                        # goals_purely.append(goal)
+                        states_ep.append(state)
+                        states_goal_ep.append([goals_ep[-self.c-1] + states_ep[-self.c-1], states_ep[-1]])
 
-                _x = self.preprocessor(x_true)
+                        loss  = mse_loss(states_goal_ep[-1][0],  states_goal_ep[-1][1])
+                        # cosine_dist = d_cos(states[t + self.c] - states[t], goals[t])
 
-                if done:
-                    break
-            loss = mse_loss(_x, states[t]+goals[t])
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            print(f'ep: {ep}, loss: {loss.item()}')
+                        # print('loss: ', loss.item())
+                        loss_ep.append(loss.item())
 
-        # calculate the mse loss between the generated states and the goal
+                        action_dist, hidden_w, value_w = self.worker(z, goals_ep[:self.c + 1], self.hidden_w, masks_ep[-1])
 
+                        action = torch.argmax(action_dist)
+                        x_true, _, done, _ = env_ep.step(action)
+                        x_true = get_atari_obs(x_true)
 
-        mask = torch.stack(masks[t: t + self.c - 1]).prod(dim=0)
-        cosine_dist = d_cos(states[t + self.c] - states[t], goals[t])
-        cosine_dist = mask * cosine_dist.unsqueeze(-1)
-        return cosine_dist
+                        mask = torch.FloatTensor(1 - done).unsqueeze(-1).to(self.args.device)
+                        masks.pop(0)
+                        masks.append(mask)
+                        xs_ep.pop(0)
+                        xs_ep.append(x_true)
+                        xs_purely.append(x_true.unsqueeze(0))
 
+                        _x = self.preprocessor(x_true.unsqueeze(0))
+
+                        if done:
+                            break
+                    # print('totally collected samples in the episode: ', len(states_goal_ep))
+                    loss_ = torch.min(torch.tensor(loss_ep))
+
+                    # print(f'ep: {ep}, total loss: {loss_.item()}')
+                    losses.append(loss_.item())
+
+                    states_goal_9.append(states_goal_ep)
+                    losses_9.append(loss_ep)
+                    x_9.append(xs_purely[:-1])
+                return (states_goal_9, losses_9, x_9)
+            else:
+                return None
     def repackage_hidden(self):
         def repackage_rnn(x):
             return [item.detach() for item in x]
@@ -177,6 +204,22 @@ class FeudalNetwork(nn.Module):
         masks = [torch.ones(self.b, 1).to(self.device) for _ in range(2*self.c+1)]
         return goals, states, masks
 
+def get_atari_obs(obs, screen_size=84):
+    """Get the observation from the Atari environment and preprocess it.
+
+    Args:
+        obs (np.ndarray): observation from the environment
+        screen_size (int, optional): size of the screen. Defaults to 84.
+
+    Returns:
+        np.ndarray: preprocessed observation
+    """
+    obs = cv2.resize(obs, (screen_size, screen_size),
+            interpolation=cv2.INTER_AREA)
+    obs = obs.transpose((2, 0, 1))
+    obs = np.asarray(obs, dtype=np.float32) / 255.0
+    obs = torch.tensor(obs, dtype=torch.float32)
+    return obs
 
 class Perception(nn.Module):
     def __init__(self, input_dim, d, mlp=False):
@@ -255,6 +298,8 @@ class Manager(nn.Module):
         cosine_dist = d_cos(states[t + self.c] - states[t], goals[t])
         cosine_dist = mask * cosine_dist.unsqueeze(-1)
         return cosine_dist
+
+
 
 class Worker(nn.Module):
     def __init__(self, b, c, d, k, num_actions, device):
