@@ -269,47 +269,46 @@ def experiment(args):
 
                         print(f"loss: {loss}")
 
-            # save model 
-            mlp_deconv.save('mlp_deconv.pt')
-            # make figures comparing x_true and x_pred
-            for iii in range(len(state_goal)):
-                _state_goal = state_goal[iii]
-                _x_true = x_trues[iii]
+                # save model 
+                torch.save(mlp_deconv.state_dict(), 'mlp_deconv.pt')
+                # make figures comparing x_true and x_pred
+                for iii in range(len(state_goal)):
+                    _state_goal = state_goal[iii]
+                    _x_true = x_trues[iii]
 
-                _x_true_valid = _x_true[model.c:]
-                _x_true_in = _x_true[:-model.c]
+                    _x_true_valid = _x_true[model.c:]
+                    _x_true_in = _x_true[:-model.c]
 
-                _x_true_valid = [torch.tensor(xt).to(device) for xt in _x_true_valid]
-                _x_true_in = [torch.tensor(xt).to(device) for xt in _x_true_in]
+                    _x_true_valid = [torch.tensor(xt).to(device) for xt in _x_true_valid]
+                    _x_true_in = [torch.tensor(xt).to(device) for xt in _x_true_in]
 
-                _x_true_valid = torch.stack(_x_true_valid).squeeze().to(device)
-                _x_true_in = torch.stack(_x_true_in).squeeze().to(device)
+                    _x_true_valid = torch.stack(_x_true_valid).squeeze().to(device)
+                    _x_true_in = torch.stack(_x_true_in).squeeze().to(device)
 
-                _state_goal_valid = _state_goal[:-model.c]
-                _goals_valid = [sg[0] for sg in _state_goal_valid]
+                    _state_goal_valid = _state_goal[:-model.c]
+                    _goals_valid = [sg[0] for sg in _state_goal_valid]
 
-                _goals_valid = torch.stack(_goals_valid).squeeze().to(device)
+                    _goals_valid = torch.stack(_goals_valid).squeeze().to(device)
 
-                _x_pred = mlp_deconv(_goals_valid.detach())
+                    _x_pred = mlp_deconv(_goals_valid.detach())
 
-                # save the figure
-                for i in range(_x_true_valid.shape[0]):
-                    x_true = _x_true_valid[i].cpu().detach().numpy()
-                    x_pred = _x_pred[i].cpu().detach().numpy()
+                    # save the figure
+                    for i in range(_x_true_valid.shape[0]):
+                        x_true = _x_true_valid[i].cpu().detach().numpy()
+                        x_pred = _x_pred[i].cpu().detach().numpy()
 
-                    x_true = np.transpose(x_true, (1, 2, 0))
-                    x_pred = np.transpose(x_pred, (1, 2, 0))
+                        x_true = np.transpose(x_true, (1, 2, 0))
+                        x_pred = np.transpose(x_pred, (1, 2, 0))
 
-                    plt.imshow(x_true)
-                    plt.savefig(f'x_true_{i}.png')
-                    plt.imshow(x_pred)
-                    plt.savefig(f'x_pred_{i}.png')
+                        plt.imshow(x_true)
+                        plt.savefig(f'x_true_{i}.png')
+                        plt.imshow(x_pred)
+                        plt.savefig(f'x_pred_{i}.png')
 
 
 
         
-
-
+            done = [True for _ in range(len(done))]
             # for ii in range(len(goals)):
             #     if ii-self.c < 0:
             #         continue

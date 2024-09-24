@@ -24,7 +24,7 @@ parser.add_argument('--env-name', type=str, default='FrostbiteNoFrameskip-v4',
                     help='gym environment name')
 parser.add_argument('--num-workers', type=int, default=1,
                     help='number of parallel environments to run')
-parser.add_argument('--num-steps', type=int, default=400,
+parser.add_argument('--num-steps', type=int, default=1000,
                     help='number of steps the agent takes before updating')
 parser.add_argument('--max-steps', type=int, default=int(1e5),
                     help='maximum number of training steps in total')
@@ -104,10 +104,10 @@ def experiment(args):
 
     if args.model_name == 'FuN':
         path = '100k_challenge/models_new_testing_fun/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
-        path = 'models_new_testing_fun/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        # path = 'models_new_testing_fun/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     if args.model_name == 'a3c':
         path = '100k_challenge/models/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
-        path = 'models/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        # path = 'models/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     model.load_state_dict(torch.load(path)['model'])
     model.eval()
 
@@ -172,6 +172,9 @@ def experiment(args):
             #                     "training/episode/length": infos[_i]['final_info']['returns/episodic_length'],
             #                     "training/episode/reward_sign": int(infos[_i]['final_info']['returns/episodic_reward']!=-1000)
             #                     },step=step)
+            wandb.log({'training/step/reward': reward[0], 'training/step/total_intrinsic': model.intrinsic_reward(states, goals, masks)[0],
+                      'training/step/total_reward': reward[0] + model.intrinsic_reward(states, goals, masks)[0]}, step=step)
+            
             for _i in range(len(done)):
                 if done[_i]:
                     wandb.log(
@@ -204,7 +207,7 @@ def main(args):
 
     seeds_ = np.random.randint(-1000, 1000, 100)
 
-    runs = wandb.Api().runs("MDM_100k_collect_test")
+    runs = wandb.Api().runs("MDM_100k_collect_final")
     existing_names = [run.name for run in runs]
 
     #for seed in range(len(noframeskip_v4_no_ram_envs)):
@@ -226,7 +229,7 @@ def main(args):
                     # Continue with the rest of the code
                     # proceed to the next step
 
-                    wandb.init(project="MDM_100k_collect_test",
+                    wandb.init(project="MDM_100k_collect_final",
                             config=args.__dict__
                             )
                     args.seed = seeds_[iters]

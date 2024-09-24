@@ -28,9 +28,9 @@ parser.add_argument('--lr', type=float, default=0.0005,
                     help='learning rate')
 parser.add_argument('--env-name', type=str, default='SolarisNoFrameskip-v4',
                     help='gym environment name')
-parser.add_argument('--num-workers', type=int, default=1,
+parser.add_argument('--num-workers', type=int, default=32,
                     help='number of parallel environments to run')
-parser.add_argument('--num-steps', type=int, default=400,
+parser.add_argument('--num-steps', type=int, default=1000,
                     help='number of steps the agent takes before updating')
 parser.add_argument('--max-steps', type=int, default=int(1e5),
                     help='maximum number of training steps in total')
@@ -59,7 +59,7 @@ parser.add_argument('--eps', type=float, default=float(1e-7),
                     help='Random Gausian goal for exploration')
 parser.add_argument('--hidden-dim-Hierarchies', type=int, default=[16, 256, 256, 256, 256],
                     help='Hidden dim (d)')
-parser.add_argument('--time_horizon_Hierarchies', type=int, default=[1, 10, 15, 20, 25], #[1, 10, 15, 20, 25],
+parser.add_argument('--time_horizon_Hierarchies', type=int, default=[1, 10, 20, 40, 80], #[1, 10, 15, 20, 25],
                     help=' horizon (c_s)')
 
 parser.add_argument('--lambda-policy-im', type=float, default=0.1)
@@ -79,6 +79,7 @@ def experiment(args):
     if cuda_is_available:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
+
 
     envs = make_envs(args.env_name, args.num_workers)
 
@@ -104,11 +105,11 @@ def experiment(args):
             args=args)
 
     if args.model_name == 'MDM_no_hd_80':
-        path = 'models_new_testing_/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
         path = '100k_challenge/models_new_testing_/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        # path = 'models_new_testing_/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     if args.model_name == 'MDM_80':
-        path = 'models_new_testing/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
-        # path = '100k_challenge/models_new_testing/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        path = '100k_challenge/models_new_testing/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
+        # path = 'models_new_testing/' + args.env_name + "_" + args.model_name + "_steps=102400.pt"
     model.load_state_dict(torch.load(path)['model'])
     model.eval()
 
@@ -179,6 +180,20 @@ def experiment(args):
                 'state_goal_3_cos': state_goal_3_cos,
                 'state_goal_2_cos': state_goal_2_cos}
 
+            #            for _i in range(len(done)):
+            #                if done[_i] or truncated[_i]:
+            #                    wandb.log(
+            #                    {"training/episode/reward": infos[_i]['final_info']['returns/episodic_reward'],
+            #                     "training/episode/length": infos[_i]['final_info']['returns/episodic_length'],
+            #                     "training/episode/reward_sign": int(infos[_i]['final_info']['returns/episodic_reward']!=-1000)
+            #                     },step=step)
+
+            wandb.log({'training/step/reward': reward[0], 'training/step/total_intrinsic': total_intrinsic[0], 
+                      'training/step/total_reward': reward[0] + total_intrinsic[0], 'training/step/state_goal_5_cos': state_goal_5_cos[0],
+                      'training/step/state_goal_4_cos': state_goal_4_cos[0], 'training/step/state_goal_3_cos': state_goal_3_cos[0], 
+                      'training/step/state_goal_2_cos': state_goal_2_cos[0], 'training/step/hierarchy3': hierarchies_selected[0][0].item(), 
+                      'training/step/hierarchy4': hierarchies_selected[0][1].item(), 'training/step/hierarchy5': hierarchies_selected[0][2].item()}, step=step)
+
             for _i in range(len(done)):
                 if done[_i]:
                     wandb.log(
@@ -187,6 +202,7 @@ def experiment(args):
                          }, step=step)
                     break_flag = True
 
+                break
             step += args.num_workers
 
             if break_flag:
@@ -212,7 +228,7 @@ def main(args):
 
     seeds_ = np.random.randint(-1000, 1000, 100)
 
-    runs = wandb.Api().runs("MDM_100k_collect_test")
+    runs = wandb.Api().runs("MDM_100k_collect_final")
     existing_names = [run.name for run in runs]
 
     for i in [ 'MDM_80', 'MDM_no_hd_80']:
@@ -223,8 +239,6 @@ def main(args):
 
                 run_name = f"{env_name_[:-14]}_{args.model_name}_iter{iters}"
 
-
-
                 if run_name in existing_names:
                     print("Project with the same name already exists.")
                     # Handle the case where the project name already exists
@@ -232,7 +246,7 @@ def main(args):
                     # Continue with the rest of the code
                     # proceed to the next step
 
-                    wandb.init(project="MDM_100k_collect_test",
+                    wandb.init(project="MDM_100k_collect_final",
                             config=args.__dict__
                             )
                     args.seed = seeds_[iters]
