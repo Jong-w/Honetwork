@@ -14,7 +14,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .utils import get_tensor
+from .utils_original import get_tensor
 from hiro.hiro_utils_original import LowReplayBuffer, HighReplayBuffer, ReplayBuffer, Subgoal
 from hiro.utils_original import _is_update
 
