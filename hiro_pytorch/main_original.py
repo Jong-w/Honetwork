@@ -1,3 +1,8 @@
+'''
+___author___: Dongjae Kim
+___purpose___: This is the original main file for the HIRO, and included wandlog for logging the training process.
+'''
+
 import os
 import argparse
 import numpy as np
@@ -8,7 +13,7 @@ from envs.create_maze_env import create_maze_env
 from hiro.hiro_utils import Subgoal
 from hiro.utils_original import Logger, _is_update, record_experience_to_csv, listdirs
 from hiro.models_original import HiroAgent, TD3Agent
-
+import wandb 
 
 def run_evaluation(args, env, agent):
     agent.load(args.load_episode)
@@ -50,16 +55,12 @@ class Trainer():
             while not done:
                 # Take action
                 a, r, n_s, done = self.agent.step(s, self.env, step, global_step, explore=True)
-
                 # Append
                 self.agent.append(step, s, a, n_s, r, done)
-
                 # Train
                 losses, td_errors = self.agent.train(global_step)
-
                 # Log
                 self.log(global_step, [losses, td_errors])
-
                 # Updates
                 s = n_s
                 episode_reward += r
@@ -103,15 +104,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Across All
-    parser.add_argument('--train', action='store_true')
-    parser.add_argument('--eval', action='store_true')
-    parser.add_argument('--render', action='store_true')
-    parser.add_argument('--save_video', action='store_true')
+    parser.add_argument('--train', type=int , default = 1)
+    parser.add_argument('--eval', type=int, default = 0)
+    parser.add_argument('--render', type=int, default = 0)  
+    parser.add_argument('--save_video', type=int, default = 0)
     parser.add_argument('--sleep', type=float, default=-1)
     parser.add_argument('--eval_episodes', type=float, default=5, help='Unit = Episode')
     parser.add_argument('--env', default='AntMaze', type=str)
     parser.add_argument('--td3', action='store_true')
-
     # Training
     parser.add_argument('--num_episode', default=25000, type=int)
     parser.add_argument('--start_training_steps', default=2500, type=int, help='Unit = Global Step')
@@ -134,6 +134,13 @@ if __name__ == '__main__':
     parser.add_argument('--train_freq', default=10, type=int)
     parser.add_argument('--reward_scaling', default=0.1, type=float)
     args = parser.parse_args()
+
+    # integer to boolean
+    args.train = bool(args.train)
+    args.eval = bool(args.eval)
+    args.render = bool(args.render)
+    args.save_video = bool(args.save_video)
+    
 
     # Select or Generate a name for this experiment
     if args.exp_name:
