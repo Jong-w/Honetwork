@@ -640,11 +640,15 @@ class HiroAgent(Agent):
             loss, td_error = self.low_con.train(self.replay_buffer_low)
             losses.update(loss)
             td_errors.update(td_error)
+            
+            print("[ LOW] Loss: {loss:.4f}, TD Error: {td_error:.4f}".format(loss=loss['critic_loss_low'], td_error=td_error['td_error_low']))
 
             if global_step % self.train_freq == 0:
                 loss, td_error = self.high_con.train(self.replay_buffer_high, self.low_con)
                 losses.update(loss)
                 td_errors.update(td_error)
+                
+                print("[HIGH] Loss: {loss:.4f}, TD Error: {td_error:.4f}".format(loss=loss['critic_loss_high'], td_error=td_error['td_error_high']))
 
         return losses, td_errors
 

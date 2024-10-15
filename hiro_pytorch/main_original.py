@@ -50,6 +50,13 @@ class Trainer():
             step = 0
             episode_reward = 0
 
+            actor_loss_low = 0
+            critic_loss_low = 0
+            actor_loss_high = 0
+            critic_loss_high = 0
+            td_error_low = 0
+            td_error_high = 0
+
             self.agent.set_final_goal(fg)
 
             while not done:
@@ -68,8 +75,53 @@ class Trainer():
                 global_step += 1
                 self.agent.end_step()
 
+                # wandb log
+                _to_log = {'step/training/reward': r, 'step/training/episode': e, 'step/training/step': step}
+                # add to _to_log for key in losses.keys(), td_errors.keys()
+                for k, v in losses.items():
+                    _to_log['step/training/%s' % (k)] = v
+                    if 'actor_loss_low' in k:
+                        actor_loss_low += v
+                    if 'critic_loss_low' in k:
+                        critic_loss_low += v
+                    if 'actor_loss_high' in k:
+                        actor_loss_high += v
+                    if 'critic_loss_high' in k:
+                        critic_loss_high += v
+
+                for k, v in td_errors.items():
+                    _to_log['step/training/%s' % (k)] = v
+                    if 'td_error_low' in k:
+                        td_error_low += v
+                    if 'td_error_high' in k:
+                        td_error_high += v
+
+                wandb.log(_to_log, step=global_step) 
+                
+                # print detaield results for debugging if losses and td_errors are not empty dict
+                # check if the dictionary is empty
+                if len(losses)==0 and len(td_errors)==0:
+                    # for every N steps, print the episode number, step number, and reward
+                    if ((step % 100) == 0) or done:
+                        print('[EP:{episode:05d}], step:{step:05d}, reward:{reward:.2f}'.format(
+                            episode=e,
+                            step=step,
+                            reward=r
+                        ))
             self.agent.end_episode(e, self.logger)
             self.logger.write('reward/Reward', episode_reward, e)
+            wandb.log(
+                {
+                    "episode/training/actor_loss_low": actor_loss_low,
+                    "episode/training/critic_loss_low": critic_loss_low,
+                    "episode/training/actor_loss_high": actor_loss_high,
+                    "episode/training/critic_loss_high": critic_loss_high,
+                    "episode/training/td_error_low": td_error_low,
+                    "episode/training/td_error_high": td_error_high,
+                    "episode/training/reward": episode_reward,
+                    "episode/training/episode": e,
+                    "episode/training/step": step
+                 }, step=global_step) 
             self.evaluate(e)
 
     def log(self, global_step, data):
@@ -98,6 +150,11 @@ class Trainer():
                     std=np.std(rewards),
                     median=np.median(rewards),
                     success=success_rate))
+            wandb.log({"test/mean_reward": np.mean(rewards),
+                        "test/std_reward": np.std(rewards),
+                        "test/median_reward": np.median(rewards),
+                       "test/success_rate": success_rate
+                       }, step=e)
 
 
 if __name__ == '__main__':
@@ -111,7 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--sleep', type=float, default=-1)
     parser.add_argument('--eval_episodes', type=float, default=5, help='Unit = Episode')
     parser.add_argument('--env', default='AntMaze', type=str)
-    parser.add_argument('--td3', action='store_true')
+    parser.add_argument('--td3', type=int, default = 0)
     # Training
     parser.add_argument('--num_episode', default=25000, type=int)
     parser.add_argument('--start_training_steps', default=2500, type=int, help='Unit = Global Step')
@@ -176,6 +233,10 @@ if __name__ == '__main__':
             start_training_steps=args.start_training_steps
         )
     else:
+        wandb.init(project="MDM_hiro",
+                   name="HIRO_original",
+               config=args.__dict__
+               )
         agent = HiroAgent(
             state_dim=state_dim,
             action_dim=action_dim,
