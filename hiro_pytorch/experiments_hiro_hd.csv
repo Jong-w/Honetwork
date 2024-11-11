@@ -1,0 +1,16 @@
+train,eval,render,save_video,sleep,eval_episodes,env,td3,num_episode,start_training_steps,writer_freq,subgoal_dim,load_episode,model_save_freq,print_freq,exp_name,model_path,log_path,policy_freq_low,policy_freq_high,buffer_size,batch_size,buffer_freq,train_freq,reward_scaling,time_horizon,date
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241111_233004
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_002816
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_003412
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_003629
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_003829
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_004050
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_011519
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_012004
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_012137
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_015309
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[1, 10, 15, 20, 25]",20241112_015623
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[20, 40, 60, 80, 100]",20241112_020807
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[5, 10, 15, 20, 25]",20241112_020920
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[5, 10, 15, 20, 25]",20241112_021429
+True,False,False,False,-1,5,AntMaze,0,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,100,10,10,0.1,"[5, 10, 15, 20, 25]",20241112_021629

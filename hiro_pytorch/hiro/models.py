@@ -1157,31 +1157,39 @@ class HiroAgent(Agent):
             loss, td_error = self.low_con.train(self.replay_buffer_low)
             losses.update(loss)
             td_errors.update(td_error)
+            print("[ LOW] Loss: {loss:.4f}, TD Error: {td_error:.4f}".format(loss=loss['critic_loss_1_low'], td_error=td_error['td_error_1_low']))
 
+        # TODO: 이거 단순하게 freq_corrc = 100 으로 하는게 맞는지 각각의 length 로 바꾸는게 맞는지
         freq_correc = 100
-        #if global_step % self.time_horizon[4] == 0:
-        if global_step % freq_correc == 0:
+        if global_step % self.time_horizon[4] == 0:
+        # if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy5.train(self.Hierarchy5_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
+            print("[HIGH-5] Loss: {loss:.4f}, TD Error: {td_error:.4f}".format(loss=loss['critic_loss_5_high5'], td_error=td_error['td_error_5_high5']))
 
-        #if global_step % self.time_horizon[3] == 0:
-        if global_step % freq_correc == 0:
+
+        if global_step % self.time_horizon[3] == 0:
+        # if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy4.train(self.Hierarchy4_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
+            print("[HIGH-4] Loss: {loss:.4f}, TD Error: {td_error:.4f}".format(loss=loss['critic_loss_4_high4'], td_error=td_error['td_error_4_high4']))
 
-        #if global_step % self.time_horizon[2] == 0:
-        if global_step % freq_correc == 0:
+
+        if global_step % self.time_horizon[2] == 0:
+        # if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy3.train(self.Hierarchy3_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
+            print("[HIGH-3] Loss: {loss:.4f}, TD Error: {td_error:.4f}".format(loss=loss['critic_loss_3_high3'], td_error=td_error['td_error_3_high3']))
 
-        #if global_step % self.time_horizon[1] == 0:
-        if global_step % freq_correc == 0:
+        if global_step % self.time_horizon[1] == 0:
+        # if global_step % freq_correc == 0:
             loss, td_error = self.Hierarchy2.train(self.Hierarchy2_buffer, self.low_con)
             losses.update(loss)
             td_errors.update(td_error)
+            print("[HIGH-2] Loss: {loss:.4f}, TD Error: {td_error:.4f}".format(loss=loss['critic_loss_2_high2'], td_error=td_error['td_error_2_high2']))
 
         return losses, td_errors
 

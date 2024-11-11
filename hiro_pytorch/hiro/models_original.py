@@ -18,9 +18,6 @@ from .utils_original import get_tensor
 from hiro.hiro_utils_original import LowReplayBuffer, HighReplayBuffer, ReplayBuffer, Subgoal
 from hiro.utils_original import _is_update
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 class TD3Actor(nn.Module):
     def __init__(self, state_dim, goal_dim, action_dim, scale=None):
         super(TD3Actor, self).__init__()
@@ -77,7 +74,9 @@ class TD3Controller(object):
             noise_clip=0.5,
             gamma=0.99,
             policy_freq=2,
-            tau=0.005):
+            tau=0.005,
+            device='cpu'):
+        self.device = device
         self.name = 'td3'
         self.scale = scale
         self.model_path = model_path
@@ -233,8 +232,8 @@ class TD3Controller(object):
         return action.squeeze()
 
     def _sample_exploration_noise(self, actions):
-        mean = torch.zeros(actions.size()).to(device)
-        var = torch.ones(actions.size()).to(device)
+        mean = torch.zeros(actions.size()).to(self.device)
+        var = torch.ones(actions.size()).to(self.device)
         # expl_noise = self.expl_noise - (self.expl_noise/1200) * (self.total_it//10000)
         return torch.normal(mean, self.expl_noise * var)
 
@@ -254,11 +253,12 @@ class HigherController(TD3Controller):
             noise_clip=0.5,
             gamma=0.99,
             policy_freq=2,
-            tau=0.005):
+            tau=0.005,
+            device = 'cpu'):
         super(HigherController, self).__init__(
             state_dim, goal_dim, action_dim, scale, model_path,
             actor_lr, critic_lr, expl_noise, policy_noise,
-            noise_clip, gamma, policy_freq, tau
+            noise_clip, gamma, policy_freq, tau, device
         )
         self.name = 'high'
         self.action_dim = action_dim
@@ -349,11 +349,12 @@ class LowerController(TD3Controller):
             noise_clip=0.5,
             gamma=0.99,
             policy_freq=2,
-            tau=0.005):
+            tau=0.005,
+            device='cpu'):
         super(LowerController, self).__init__(
             state_dim, goal_dim, action_dim, scale, model_path,
             actor_lr, critic_lr, expl_noise, policy_noise,
-            noise_clip, gamma, policy_freq, tau
+            noise_clip, gamma, policy_freq, tau, device
         )
         self.name = 'low'
 
@@ -520,9 +521,11 @@ class HiroAgent(Agent):
             train_freq,
             reward_scaling,
             policy_freq_high,
-            policy_freq_low):
+            policy_freq_low,
+            device = 'cpu'):
+        self.device = device
 
-        self.subgoal = Subgoal(subgoal_dim)
+        self.subgoal = Subgoal(subgoal_dim, self.device)
         scale_high = self.subgoal.action_space.high * np.ones(subgoal_dim)
 
         self.model_save_freq = model_save_freq
@@ -533,7 +536,8 @@ class HiroAgent(Agent):
             action_dim=subgoal_dim,
             scale=scale_high,
             model_path=model_path,
-            policy_freq=policy_freq_high
+            policy_freq=policy_freq_high,
+            device = self.device
         )
 
         self.low_con = LowerController(
@@ -542,7 +546,8 @@ class HiroAgent(Agent):
             action_dim=action_dim,
             scale=scale_low,
             model_path=model_path,
-            policy_freq=policy_freq_low
+            policy_freq=policy_freq_low,
+            device = self.device
         )
 
         self.replay_buffer_low = LowReplayBuffer(

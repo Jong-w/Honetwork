@@ -13,6 +13,7 @@ from envs.create_maze_env import create_maze_env
 from hiro.hiro_utils import Subgoal
 from hiro.utils_original import Logger, _is_update, record_experience_to_csv, listdirs
 from hiro.models_original import HiroAgent, TD3Agent
+import torch
 import wandb 
 
 def run_evaluation(args, env, agent):
@@ -43,6 +44,8 @@ class Trainer():
 
         for e in np.arange(self.args.num_episode) + 1:
             obs = self.env.reset()
+            # fg = torch.Tensor(obs['desired_goal']).to(device)
+            # s = torch.Tensor(obs['observation']).to(device)
             fg = obs['desired_goal']
             s = obs['observation']
             done = False
@@ -177,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('--subgoal_dim', default=15, type=int)
     parser.add_argument('--load_episode', default=-1, type=int)
     parser.add_argument('--model_save_freq', default=2000, type=int, help='Unit = Episodes')
-    parser.add_argument('--print_freq', default=250, type=int, help='Unit = Episode')
+    parser.add_argument('--print_freq', default=200, type=int, help='Unit = Episode')
     parser.add_argument('--exp_name', default=None, type=str)
     # Model
     parser.add_argument('--model_path', default='model', type=str)
@@ -191,6 +194,13 @@ if __name__ == '__main__':
     parser.add_argument('--train_freq', default=10, type=int)
     parser.add_argument('--reward_scaling', default=0.1, type=float)
     args = parser.parse_args()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    wandb.init(project="MDM_hiro_dk",
+               name="HIRO_original",
+               config=args.__dict__
+               )
 
     # integer to boolean
     args.train = bool(args.train)
@@ -233,10 +243,6 @@ if __name__ == '__main__':
             start_training_steps=args.start_training_steps
         )
     else:
-        wandb.init(project="MDM_hiro",
-                   name="HIRO_original",
-               config=args.__dict__
-               )
         agent = HiroAgent(
             state_dim=state_dim,
             action_dim=action_dim,
@@ -252,7 +258,8 @@ if __name__ == '__main__':
             train_freq=args.train_freq,
             reward_scaling=args.reward_scaling,
             policy_freq_high=args.policy_freq_high,
-            policy_freq_low=args.policy_freq_low
+            policy_freq_low=args.policy_freq_low,
+            device=device
         )
 
     # Run training or evaluation
@@ -264,3 +271,5 @@ if __name__ == '__main__':
         trainer.train()
     if args.eval:
         run_evaluation(args, env, agent)
+    
+    wandb.finish()

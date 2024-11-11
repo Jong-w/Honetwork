@@ -319,3 +319,5 @@ True,False,False,False,-1,5,AntMaze,False,25000,500,25,15,-1,2000,100,,model,log
 True,False,False,False,-1,5,AntMaze,False,25000,500,25,15,-1,2000,100,,model,log,2,2,200000,1500,10,10,0.1,"[1, 10, 15, 20, 25]",20240724_091534
 True,False,False,False,-1,5,AntMaze,False,25000,2500,25,15,-1,2000,250,,model,log,2,2,200000,100,10,10,0.1,20241008_104845
 True,False,False,False,-1,5,AntMaze,False,25000,2500,25,15,-1,2000,250,,model,log,2,2,200000,100,10,10,0.1,20241009_014503
+True,False,False,False,-1,5,AntMaze,False,25000,2500,25,15,-1,2000,250,,model,log,2,2,200000,100,10,10,0.1,20241010_123630
+True,False,False,False,-1,5,AntMaze,0,25000,2500,25,15,-1,2000,250,,model,log,2,2,200000,100,10,10,0.1,20241015_112727

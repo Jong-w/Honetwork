@@ -73,7 +73,7 @@ class ReplayBuffer():
             torch.FloatTensor(self.not_done[ind]).to(self.device),
         )
 
-def record_experience_to_csv(args, experiment_name, csv_name='experiments.csv'):
+def record_experience_to_csv(args, experiment_name, csv_name='experiments_hiro_original.csv'):
     # append DATE_TIME to dict
     d = vars(args)
     d['date'] = experiment_name
