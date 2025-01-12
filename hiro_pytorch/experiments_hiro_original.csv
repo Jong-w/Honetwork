@@ -9,3 +9,4 @@ True,False,False,False,-1,5,AntMaze,0,25000,2500,25,15,-1,2000,250,,model,log,2,
 True,False,False,False,-1,5,AntMaze,0,25000,2500,25,15,-1,2000,5,,model,log,2,2,200000,100,10,10,0.1,20241112_005424
 True,False,False,False,-1,5,AntMaze,0,25000,2500,25,15,-1,2000,5,,model,log,2,2,200000,100,10,10,0.1,20241112_005650
 True,False,False,False,-1,5,AntMaze,0,25000,2500,25,15,-1,2000,200,,model,log,2,2,200000,100,10,10,0.1,20241112_010747
+True,False,False,False,-1,5,AntMaze,0,25000,2500,25,15,-1,2000,200,,model_original,log,2,2,200000,100,10,10,0.1,20241224_023859

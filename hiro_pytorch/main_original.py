@@ -183,7 +183,7 @@ if __name__ == '__main__':
     parser.add_argument('--print_freq', default=200, type=int, help='Unit = Episode')
     parser.add_argument('--exp_name', default=None, type=str)
     # Model
-    parser.add_argument('--model_path', default='model', type=str)
+    parser.add_argument('--model_path', default='model_original', type=str)
     parser.add_argument('--log_path', default='log', type=str)
     parser.add_argument('--policy_freq_low', default=2, type=int)
     parser.add_argument('--policy_freq_high', default=2, type=int)
