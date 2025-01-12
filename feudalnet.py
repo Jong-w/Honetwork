@@ -153,6 +153,7 @@ class FeudalNetwork(nn.Module):
                         goals_ep.append(goal)
                         # goals_purely.append(goal)
                         states_ep.append(state)
+                        # returning c steps before the state so that check if it matched with the goal
                         states_goal_ep.append([goals_ep[-self.c-1] + states_ep[-self.c-1], states_ep[-1]])
 
                         loss  = mse_loss(states_goal_ep[-1][0],  states_goal_ep[-1][1])

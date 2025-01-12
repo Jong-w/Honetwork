@@ -269,8 +269,12 @@ def experiment(args):
 
                         print(f"loss: {loss}")
 
-                # save model 
-                torch.save(mlp_deconv.state_dict(), 'mlp_deconv.pt')
+                # make dirs with the name of the model and env
+                dirname = 'gen_goal/' + args.model_name + "_" + args.env_name
+                os.makedirs(dirname, exist_ok=True)
+
+                # save model but including the model name
+                torch.save(mlp_deconv.state_dict(), dirname + '/mlp_deconv_' + args.env_name + "_" + args.model_name + "_steps=102400.pt")
                 # make figures comparing x_true and x_pred
                 for iii in range(len(state_goal)):
                     _state_goal = state_goal[iii]
@@ -301,46 +305,10 @@ def experiment(args):
                         x_pred = np.transpose(x_pred, (1, 2, 0))
 
                         plt.imshow(x_true)
-                        plt.savefig(f'x_true_{i}.png')
+                        plt.savefig(os.path.join(dirname, f'x_true_{i}.png'))
                         plt.imshow(x_pred)
-                        plt.savefig(f'x_pred_{i}.png')
-
-
-
-        
-            done = [True for _ in range(len(done))]
-            # for ii in range(len(goals)):
-            #     if ii-self.c < 0:
-            #         continue
-            #     if not torch.all(goals[ii]==0) and not torch.all(states[ii-self.c]==0):
-            #         print(ii)
-
-            storage.add({
-                'r': torch.FloatTensor(reward).unsqueeze(-1).to(device),
-                'r_i': model.intrinsic_reward(states, goals, masks),
-                'v_w': value_w,
-                'v_m': value_m,
-                'logp': logp.unsqueeze(-1),
-                'entropy': entropy.unsqueeze(-1),
-                's_goal_cos': model.state_goal_cosine(states, goals, masks),
-                'm': mask
-            })
-            #            for _i in range(len(done)):
-            #                if done[_i] or truncated[_i]:
-            #                    wandb.log(
-            #                    {"training/episode/reward": infos[_i]['final_info']['returns/episodic_reward'],
-            #                     "training/episode/length": infos[_i]['final_info']['returns/episodic_length'],
-            #                     "training/episode/reward_sign": int(infos[_i]['final_info']['returns/episodic_reward']!=-1000)
-            #                     },step=step)
-            for _i in range(len(done)):
-                if done[_i]:
-                    # wandb.log(
-                    #     {"training/episode/reward": info[_i]['returns/episodic_reward'],
-                    #      "training/episode/length": info[_i]['returns/episodic_length']
-                    #      }, step=step)
-                    break_flag = True
-            step += args.num_workers
-
+                        plt.savefig(os.path.join(dirname, f'x_pred_{i}.png'))
+                break_flag = True
             if break_flag:
                 break
         if break_flag:
