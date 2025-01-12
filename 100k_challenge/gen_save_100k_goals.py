@@ -169,7 +169,7 @@ def experiment(args):
     model.load_state_dict(torch.load(path)['model'])
     model.eval()
 
-    # load rnn rl model
+    # load rnn rl model  
     rl = rl_model(input_dim=256, hidden_dim=256, n_actions=envs.single_action_space.n, device=device, mlp=args.mlp).to(device)
     rl.train()
     mlp_deconv = mlp_env().to(device)
